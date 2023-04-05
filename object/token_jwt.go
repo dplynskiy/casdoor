@@ -107,6 +107,16 @@ type ClaimsWithoutThirdIdp struct {
 	jwt.RegisteredClaims
 }
 
+type ClaimsSubscription struct {
+	TokenType string `json:"tokenType,omitempty"`
+	Nonce     string `json:"nonce,omitempty"`
+	Tag       string `json:"tag,omitempty"`
+	Scope     string `json:"scope,omitempty"`
+	// XXX: should we use xorg tag here? Since we won't save the token in storage
+	Permissions []*Permission `xorm:"-" json:"permissions"`
+	jwt.RegisteredClaims
+}
+
 func getShortUser(user *User) *UserShort {
 	res := &UserShort{
 		Owner: user.Owner,
@@ -201,6 +211,17 @@ func getClaimsWithoutThirdIdp(claims Claims) ClaimsWithoutThirdIdp {
 	return res
 }
 
+func getSubscriptionClaims(claims Claims) ClaimsSubscription {
+	res := ClaimsSubscription{
+		TokenType:        claims.TokenType,
+		Nonce:            claims.Nonce,
+		Scope:            claims.Scope,
+		RegisteredClaims: claims.RegisteredClaims,
+		Permissions:      claims.User.Permissions,
+	}
+	return res
+}
+
 func refineUser(user *User) *User {
 	user.Password = ""
 
@@ -286,6 +307,55 @@ func generateJwtToken(application *Application, user *User, nonce string, scope 
 	refreshTokenString, err := refreshToken.SignedString(key)
 
 	return tokenString, refreshTokenString, name, err
+}
+
+func generateSubscriptionToken(
+	application *Application, user *User, subscription *Subscription, nonce string, scope string, host string,
+) (string, error) {
+	nowTime := time.Now()
+	expireTime := nowTime.Add(time.Duration(subscription.Duration) * time.Hour * 24)
+
+	user = refineUser(user)
+
+	_, originBackend := getOriginFromHost(host)
+
+	name := util.GenerateId()
+	jti := fmt.Sprintf("%s/%s", application.Owner, name)
+
+	claims := Claims{
+		User:      user,
+		TokenType: "subscription-token",
+		Nonce:     nonce,
+		Tag:       user.Tag,
+		Scope:     scope,
+		RegisteredClaims: jwt.RegisteredClaims{
+			Issuer:    originBackend,
+			Subject:   user.Id,
+			ExpiresAt: jwt.NewNumericDate(expireTime),
+			NotBefore: jwt.NewNumericDate(nowTime),
+			IssuedAt:  jwt.NewNumericDate(nowTime),
+			ID:        jti,
+		},
+	}
+
+	cert := getCertByApplication(application)
+
+	// RSA private key
+	key, err := jwt.ParseRSAPrivateKeyFromPEM([]byte(cert.PrivateKey))
+	if err != nil {
+		return "", err
+	}
+
+	subscriptionClaims := getSubscriptionClaims(claims)
+	token := jwt.NewWithClaims(jwt.SigningMethodRS256, subscriptionClaims)
+
+	token.Header["kid"] = cert.Name
+	tokenString, err := token.SignedString(key)
+	if err != nil {
+		return "", err
+	}
+
+	return tokenString, nil
 }
 
 func ParseJwtToken(token string, cert *Cert) (*Claims, error) {
