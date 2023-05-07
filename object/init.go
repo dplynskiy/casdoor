@@ -67,6 +67,7 @@ func getBuiltInAccountItems() []*AccountItem {
 		{Name: "Is global admin", Visible: true, ViewRule: "Admin", ModifyRule: "Admin"},
 		{Name: "Is forbidden", Visible: true, ViewRule: "Admin", ModifyRule: "Admin"},
 		{Name: "Is deleted", Visible: true, ViewRule: "Admin", ModifyRule: "Admin"},
+		{Name: "Multi-factor authentication", Visible: true, ViewRule: "Self", ModifyRule: "Self"},
 		{Name: "WebAuthn credentials", Visible: true, ViewRule: "Self", ModifyRule: "Self"},
 		{Name: "Managed accounts", Visible: true, ViewRule: "Self", ModifyRule: "Self"},
 	}
@@ -219,8 +220,8 @@ func initBuiltInLdap() {
 		ServerName: "BuildIn LDAP Server",
 		Host:       "example.com",
 		Port:       389,
-		Admin:      "cn=buildin,dc=example,dc=com",
-		Passwd:     "123",
+		Username:   "cn=buildin,dc=example,dc=com",
+		Password:   "123",
 		BaseDn:     "ou=BuildIn,dc=example,dc=com",
 		AutoSync:   0,
 		LastSync:   "",

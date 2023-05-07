@@ -21,7 +21,7 @@ import * as PaymentBackend from "./backend/PaymentBackend";
 import i18next from "i18next";
 import BaseListPage from "./BaseListPage";
 import * as Provider from "./auth/Provider";
-import PopconfirmModal from "./PopconfirmModal";
+import PopconfirmModal from "./common/modal/PopconfirmModal";
 
 class PaymentListPage extends BaseListPage {
   newPayment() {
@@ -243,7 +243,7 @@ class PaymentListPage extends BaseListPage {
 
     return (
       <div>
-        <Table scroll={{x: "max-content"}} columns={columns} dataSource={payments} rowKey="name" size="middle" bordered pagination={paginationProps}
+        <Table scroll={{x: "max-content"}} columns={columns} dataSource={payments} rowKey={(record) => `${record.owner}/${record.name}`} size="middle" bordered pagination={paginationProps}
           title={() => (
             <div>
               {i18next.t("general:Payments")}&nbsp;&nbsp;&nbsp;&nbsp;

@@ -15,10 +15,12 @@
 package object
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
 
 	"github.com/casdoor/casdoor/conf"
+	"github.com/casdoor/casdoor/proxy"
 	"github.com/casdoor/casdoor/util"
 	"github.com/go-webauthn/webauthn/webauthn"
 	"github.com/xorm-io/core"
@@ -48,6 +50,7 @@ type User struct {
 	EmailVerified     bool     `json:"emailVerified"`
 	Phone             string   `xorm:"varchar(20) index" json:"phone"`
 	CountryCode       string   `xorm:"varchar(6)" json:"countryCode"`
+	Region            string   `xorm:"varchar(100)" json:"region"`
 	Location          string   `xorm:"varchar(100)" json:"location"`
 	Address           []string `json:"address"`
 	Affiliation       string   `xorm:"varchar(100)" json:"affiliation"`
@@ -57,7 +60,6 @@ type User struct {
 	Homepage          string   `xorm:"varchar(100)" json:"homepage"`
 	Bio               string   `xorm:"varchar(100)" json:"bio"`
 	Tag               string   `xorm:"varchar(100)" json:"tag"`
-	Region            string   `xorm:"varchar(100)" json:"region"`
 	Language          string   `xorm:"varchar(100)" json:"language"`
 	Gender            string   `xorm:"varchar(100)" json:"gender"`
 	Birthday          string   `xorm:"varchar(100)" json:"birthday"`
@@ -155,6 +157,7 @@ type User struct {
 	Custom          string `xorm:"custom varchar(100)" json:"custom"`
 
 	WebauthnCredentials []webauthn.Credential `xorm:"webauthnCredentials blob" json:"webauthnCredentials"`
+	MultiFactorAuths    []*MfaProps           `json:"multiFactorAuths"`
 
 	Ldap       string            `xorm:"ldap varchar(100)" json:"ldap"`
 	Properties map[string]string `json:"properties"`
@@ -399,6 +402,12 @@ func GetMaskedUser(user *User) *User {
 			manageAccount.Password = "***"
 		}
 	}
+
+	if user.MultiFactorAuths != nil {
+		for i, props := range user.MultiFactorAuths {
+			user.MultiFactorAuths[i] = GetMaskedProps(props)
+		}
+	}
 	return user
 }
 
@@ -423,7 +432,7 @@ func GetLastUser(owner string) *User {
 	return nil
 }
 
-func UpdateUser(id string, user *User, columns []string, isGlobalAdmin bool) bool {
+func UpdateUser(id string, user *User, columns []string, isAdmin bool) bool {
 	owner, name := util.GetOwnerAndNameFromIdNoCheck(id)
 	oldUser := getUser(owner, name)
 	if oldUser == nil {
@@ -449,12 +458,12 @@ func UpdateUser(id string, user *User, columns []string, isGlobalAdmin bool) boo
 	if len(columns) == 0 {
 		columns = []string{
 			"owner", "display_name", "avatar",
-			"location", "address", "country_code", "region", "language", "affiliation", "title", "homepage", "bio", "score", "tag", "signup_application",
+			"location", "address", "country_code", "region", "language", "affiliation", "title", "homepage", "bio", "tag", "language", "gender", "birthday", "education", "score", "karma", "ranking", "signup_application",
 			"is_admin", "is_global_admin", "is_forbidden", "is_deleted", "hash", "is_default_avatar", "properties", "webauthnCredentials", "managedAccounts",
 			"signin_wrong_times", "last_signin_wrong_time",
 		}
 	}
-	if isGlobalAdmin {
+	if isAdmin {
 		columns = append(columns, "name", "email", "phone", "country_code")
 	}
 
@@ -513,7 +522,10 @@ func AddUser(user *User) bool {
 	user.UpdateUserHash()
 	user.PreHash = user.Hash
 
-	user.PermanentAvatar = getPermanentAvatarUrl(user.Owner, user.Name, user.Avatar, false)
+	updated := user.refreshAvatar()
+	if updated && user.PermanentAvatar != "*" {
+		user.PermanentAvatar = getPermanentAvatarUrl(user.Owner, user.Name, user.Avatar, false)
+	}
 
 	user.Ranking = GetUserCount(user.Owner, "", "") + 1
 
@@ -652,13 +664,12 @@ func userChangeTrigger(oldName string, newName string) error {
 	for _, role := range roles {
 		for j, u := range role.Users {
 			// u = organization/username
-			split := strings.Split(u, "/")
-			if split[1] == oldName {
-				split[1] = newName
-				role.Users[j] = split[0] + "/" + split[1]
+			owner, name := util.GetOwnerAndNameFromId(u)
+			if name == oldName {
+				role.Users[j] = util.GetId(owner, newName)
 			}
 		}
-		_, err = session.Where("name=?", role.Name).Update(role)
+		_, err = session.Where("name=?", role.Name).And("owner=?", role.Owner).Update(role)
 		if err != nil {
 			return err
 		}
@@ -672,13 +683,12 @@ func userChangeTrigger(oldName string, newName string) error {
 	for _, permission := range permissions {
 		for j, u := range permission.Users {
 			// u = organization/username
-			split := strings.Split(u, "/")
-			if split[1] == oldName {
-				split[1] = newName
-				permission.Users[j] = split[0] + "/" + split[1]
+			owner, name := util.GetOwnerAndNameFromId(u)
+			if name == oldName {
+				permission.Users[j] = util.GetId(owner, newName)
 			}
 		}
-		_, err = session.Where("name=?", permission.Name).Update(permission)
+		_, err = session.Where("name=?", permission.Name).And("owner=?", permission.Owner).Update(permission)
 		if err != nil {
 			return err
 		}
@@ -692,4 +702,73 @@ func userChangeTrigger(oldName string, newName string) error {
 	}
 
 	return session.Commit()
+}
+
+func (user *User) refreshAvatar() bool {
+	var err error
+	var fileBuffer *bytes.Buffer
+	var ext string
+
+	// Gravatar + Identicon
+	if strings.Contains(user.Avatar, "Gravatar") && user.Email != "" {
+		client := proxy.ProxyHttpClient
+		has, err := hasGravatar(client, user.Email)
+		if err != nil {
+			panic(err)
+		}
+
+		if has {
+			fileBuffer, ext, err = getGravatarFileBuffer(client, user.Email)
+			if err != nil {
+				panic(err)
+			}
+		}
+	}
+
+	if fileBuffer == nil && strings.Contains(user.Avatar, "Identicon") {
+		fileBuffer, ext, err = getIdenticonFileBuffer(user.Name)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	if fileBuffer != nil {
+		avatarUrl := getPermanentAvatarUrlFromBuffer(user.Owner, user.Name, fileBuffer, ext, true)
+		user.Avatar = avatarUrl
+		return true
+	}
+
+	return false
+}
+
+func (user *User) IsMfaEnabled() bool {
+	return len(user.MultiFactorAuths) > 0
+}
+
+func (user *User) GetPreferMfa(masked bool) *MfaProps {
+	if len(user.MultiFactorAuths) == 0 {
+		return nil
+	}
+
+	if masked {
+		if len(user.MultiFactorAuths) == 1 {
+			return GetMaskedProps(user.MultiFactorAuths[0])
+		}
+		for _, v := range user.MultiFactorAuths {
+			if v.IsPreferred {
+				return GetMaskedProps(v)
+			}
+		}
+		return GetMaskedProps(user.MultiFactorAuths[0])
+	} else {
+		if len(user.MultiFactorAuths) == 1 {
+			return user.MultiFactorAuths[0]
+		}
+		for _, v := range user.MultiFactorAuths {
+			if v.IsPreferred {
+				return v
+			}
+		}
+		return user.MultiFactorAuths[0]
+	}
 }

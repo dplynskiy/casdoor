@@ -23,6 +23,14 @@
   "cas": {
     "Service %s and %s do not match": "Layanan %s dan %s tidak cocok"
   },
+  "chat": {
+    "The chat type must be \\\"AI\\\"": "The chat type must be \\\"AI\\\"",
+    "The chat: %s is not found": "The chat: %s is not found",
+    "The message is invalid": "The message is invalid",
+    "The message: %s is not found": "The message: %s is not found",
+    "The provider: %s is invalid": "The provider: %s is invalid",
+    "The provider: %s is not found": "The provider: %s is not found"
+  },
   "check": {
     "Affiliation cannot be blank": "Keterkaitan tidak boleh kosong",
     "DisplayName cannot be blank": "Nama Pengguna tidak boleh kosong",
@@ -32,8 +40,8 @@
     "Email is invalid": "Email tidak valid",
     "Empty username.": "Nama pengguna kosong.",
     "FirstName cannot be blank": "Nama depan tidak boleh kosong",
+    "LDAP user name or password incorrect": "Nama pengguna atau kata sandi Ldap salah",
     "LastName cannot be blank": "Nama belakang tidak boleh kosong",
-    "Ldap user name or password incorrect": "Nama pengguna atau kata sandi Ldap salah",
     "Multiple accounts with same uid, please check your ldap server": "Beberapa akun dengan uid yang sama, harap periksa server ldap Anda",
     "Organization does not exist": "Organisasi tidak ada",
     "Password must have at least 6 characters": "Kata sandi harus memiliki minimal 6 karakter",
@@ -42,6 +50,7 @@
     "Phone number is invalid": "Nomor telepon tidak valid",
     "Session outdated, please login again": "Sesi kedaluwarsa, silakan masuk lagi",
     "The user is forbidden to sign in, please contact the administrator": "Pengguna dilarang masuk, silakan hubungi administrator",
+    "The user: %s doesn't exist in LDAP server": "The user: %s doesn't exist in LDAP server",
     "The username may only contain alphanumeric characters, underlines or hyphens, cannot have consecutive hyphens or underlines, and cannot begin or end with a hyphen or underline.": "Nama pengguna hanya bisa menggunakan karakter alfanumerik, garis bawah atau tanda hubung, tidak boleh memiliki dua tanda hubung atau garis bawah berurutan, dan tidak boleh diawali atau diakhiri dengan tanda hubung atau garis bawah.",
     "Username already exists": "Nama pengguna sudah ada",
     "Username cannot be an email address": "Username tidak bisa menjadi alamat email",
@@ -51,6 +60,7 @@
     "Username must have at least 2 characters": "Nama pengguna harus memiliki setidaknya 2 karakter",
     "You have entered the wrong password or code too many times, please wait for %d minutes and try again": "Anda telah memasukkan kata sandi atau kode yang salah terlalu banyak kali, mohon tunggu selama %d menit dan coba lagi",
     "Your region is not allow to signup by phone": "Wilayah Anda tidak diizinkan untuk mendaftar melalui telepon",
+    "password or code is incorrect": "password or code is incorrect",
     "password or code is incorrect, you have %d remaining chances": "Kata sandi atau kode salah, Anda memiliki %d kesempatan tersisa",
     "unsupported password type: %s": "jenis sandi tidak didukung: %s"
   },
@@ -128,7 +138,6 @@
     "Unable to get the email modify rule.": "Tidak dapat memperoleh aturan modifikasi email.",
     "Unable to get the phone modify rule.": "Tidak dapat memodifikasi aturan telepon.",
     "Unknown type": "Tipe tidak diketahui",
-    "Wrong parameter": "Parameter yang salah",
     "Wrong verification code!": "Kode verifikasi salah!",
     "You should verify your code in %d min!": "Anda harus memverifikasi kode Anda dalam %d menit!",
     "the user does not exist, please sign up first": "Pengguna tidak ada, silakan daftar terlebih dahulu"

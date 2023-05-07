@@ -24,7 +24,6 @@ import {authConfig} from "./auth/Auth";
 import {Helmet} from "react-helmet";
 import * as Conf from "./Conf";
 import * as phoneNumber from "libphonenumber-js";
-import * as path from "path-browserify";
 
 const {Option} = Select;
 
@@ -42,7 +41,7 @@ export const Countries = [{label: "English", key: "en", country: "US", alt: "Eng
   {label: "日本語", key: "ja", country: "JP", alt: "日本語"},
   {label: "한국어", key: "ko", country: "KR", alt: "한국어"},
   {label: "Русский", key: "ru", country: "RU", alt: "Русский"},
-  {label: "TiếngViệt", key: "vi", country: "VI", alt: "TiếngViệt"},
+  {label: "TiếngViệt", key: "vi", country: "VN", alt: "TiếngViệt"},
 ];
 
 export function getThemeData(organization, application) {
@@ -203,6 +202,12 @@ export const OtherProviderInfo = {
     "Cloudflare Turnstile": {
       logo: `${StaticBaseUrl}/img/social_cloudflare.png`,
       url: "https://www.cloudflare.com/products/turnstile/",
+    },
+  },
+  AI: {
+    "OpenAI API - GPT": {
+      logo: `${StaticBaseUrl}/img/social_openai.svg`,
+      url: "https://platform.openai.com",
     },
   },
 };
@@ -856,6 +861,10 @@ export function getProviderTypeOptions(category) {
       {id: "GEETEST", name: "GEETEST"},
       {id: "Cloudflare Turnstile", name: "Cloudflare Turnstile"},
     ]);
+  } else if (category === "AI") {
+    return ([
+      {id: "OpenAI API - GPT", name: "OpenAI API - GPT"},
+    ]);
   } else {
     return [];
   }
@@ -888,7 +897,7 @@ export function getLoginLink(application) {
   } else if (authConfig.appName === application.name) {
     url = "/login";
   } else if (application.signinUrl === "") {
-    url = path.join(application.homepageUrl, "/login");
+    url = trim(application.homepageUrl, "/") + "/login";
   } else {
     url = application.signinUrl;
   }
@@ -902,10 +911,11 @@ export function renderLoginLink(application, text) {
 
 export function redirectToLoginPage(application, history) {
   const loginLink = getLoginLink(application);
-  if (loginLink.indexOf("http") === 0 || loginLink.indexOf("https") === 0) {
-    window.location.replace(loginLink);
+  if (loginLink.startsWith("http://") || loginLink.startsWith("https://")) {
+    goToLink(loginLink);
+  } else {
+    history.push(loginLink);
   }
-  history.push(loginLink);
 }
 
 function renderLink(url, text, onClick) {
@@ -1047,13 +1057,17 @@ export function getMaskedEmail(email) {
   return `${username}@${domainTokens.join(".")}`;
 }
 
+export function IsEmail(s) {
+  return s.includes("@");
+}
+
 export function getArrayItem(array, key, value) {
   const res = array.filter(item => item[key] === value)[0];
   return res;
 }
 
 export function getDeduplicatedArray(array, filterArray, key) {
-  const res = array.filter(item => filterArray.filter(filterItem => filterItem[key] === item[key]).length === 0);
+  const res = array.filter(item => !filterArray.some(tableItem => tableItem[key] === item[key]));
   return res;
 }
 
@@ -1070,18 +1084,28 @@ export function getTagColor(s) {
   return "processing";
 }
 
-export function getTags(tags) {
+export function getTags(tags, urlPrefix = null) {
   const res = [];
   if (!tags) {
     return res;
   }
 
   tags.forEach((tag, i) => {
-    res.push(
-      <Tag color={getTagColor(tag)}>
-        {tag}
-      </Tag>
-    );
+    if (urlPrefix === null) {
+      res.push(
+        <Tag color={getTagColor(tag)}>
+          {tag}
+        </Tag>
+      );
+    } else {
+      res.push(
+        <Link to={`/${urlPrefix}/${tag}`}>
+          <Tag color={getTagColor(tag)}>
+            {tag}
+          </Tag>
+        </Link>
+      );
+    }
   });
   return res;
 }

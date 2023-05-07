@@ -20,7 +20,22 @@ import * as Setting from "./Setting";
 import * as ModelBackend from "./backend/ModelBackend";
 import i18next from "i18next";
 import BaseListPage from "./BaseListPage";
-import PopconfirmModal from "./PopconfirmModal";
+import PopconfirmModal from "./common/modal/PopconfirmModal";
+
+const rbacModel = `[request_definition]
+r = sub, obj, act
+
+[policy_definition]
+p = sub, obj, act
+
+[role_definition]
+g = _, _
+
+[policy_effect]
+e = some(where (p.eft == allow))
+
+[matchers]
+m = g(r.sub, p.sub) && r.obj == p.obj && r.act == p.act`;
 
 class ModelListPage extends BaseListPage {
   newModel() {
@@ -30,7 +45,7 @@ class ModelListPage extends BaseListPage {
       name: `model_${randomName}`,
       createdTime: moment().format(),
       displayName: `New Model - ${randomName}`,
-      modelText: "",
+      modelText: rbacModel,
       isEnabled: true,
     };
   }
@@ -163,7 +178,7 @@ class ModelListPage extends BaseListPage {
 
     return (
       <div>
-        <Table scroll={{x: "max-content"}} columns={columns} dataSource={models} rowKey="name" size="middle" bordered
+        <Table scroll={{x: "max-content"}} columns={columns} dataSource={models} rowKey={(record) => `${record.owner}/${record.name}`} size="middle" bordered
           pagination={paginationProps}
           title={() => (
             <div>

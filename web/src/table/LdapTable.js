@@ -18,7 +18,7 @@ import * as Setting from "../Setting";
 import i18next from "i18next";
 import * as LdapBackend from "../backend/LdapBackend";
 import {Link} from "react-router-dom";
-import PopconfirmModal from "../PopconfirmModal";
+import PopconfirmModal from "../common/modal/PopconfirmModal";
 
 class LdapTable extends React.Component {
   constructor(props) {
@@ -45,8 +45,8 @@ class LdapTable extends React.Component {
       serverName: "Example LDAP Server",
       host: "example.com",
       port: 389,
-      admin: "cn=admin,dc=example,dc=com",
-      passwd: "123",
+      username: "cn=admin,dc=example,dc=com",
+      password: "123",
       baseDn: "ou=People,dc=example,dc=com",
       autosync: 0,
       lastSync: "",

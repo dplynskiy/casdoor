@@ -90,6 +90,7 @@ p, *, *, GET, /api/userinfo, *, *
 p, *, *, GET, /api/user, *, *
 p, *, *, POST, /api/webhook, *, *
 p, *, *, GET, /api/get-webhook-event, *, *
+p, *, *, GET, /api/get-captcha-status, *, *
 p, *, *, *, /api/login/oauth, *, *
 p, *, *, GET, /api/get-application, *, *
 p, *, *, GET, /api/get-organization-applications, *, *
@@ -108,6 +109,7 @@ p, *, *, POST, /api/set-password, *, *
 p, *, *, POST, /api/send-verification-code, *, *
 p, *, *, GET, /api/get-captcha, *, *
 p, *, *, POST, /api/verify-captcha, *, *
+p, *, *, POST, /api/verify-code, *, *
 p, *, *, POST, /api/reset-email-or-phone, *, *
 p, *, *, POST, /api/upload-resource, *, *
 p, *, *, GET, /.well-known/openid-configuration, *, *
@@ -119,6 +121,8 @@ p, *, *, *, /cas, *, *
 p, *, *, *, /api/webauthn, *, *
 p, *, *, GET, /api/get-release, *, *
 p, *, *, GET, /api/get-default-application, *, *
+p, *, *, GET, /api/get-prometheus-info, *, *
+p, *, *, *, /api/metrics, *, *
 `
 
 		sa := stringadapter.NewAdapter(ruleText)

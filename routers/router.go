@@ -21,8 +21,8 @@ package routers
 
 import (
 	"github.com/beego/beego"
-
 	"github.com/casdoor/casdoor/controllers"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func init() {
@@ -57,6 +57,7 @@ func initAPI() {
 	beego.Router("/api/saml/metadata", &controllers.ApiController{}, "GET:GetSamlMeta")
 	beego.Router("/api/webhook", &controllers.ApiController{}, "POST:HandleOfficialAccountEvent")
 	beego.Router("/api/get-webhook-event", &controllers.ApiController{}, "GET:GetWebhookEventType")
+	beego.Router("/api/get-captcha-status", &controllers.ApiController{}, "GET:GetCaptchaStatus")
 
 	beego.Router("/api/get-organizations", &controllers.ApiController{}, "GET:GetOrganizations")
 	beego.Router("/api/get-organization", &controllers.ApiController{}, "GET:GetOrganization")
@@ -115,6 +116,7 @@ func initAPI() {
 	beego.Router("/api/check-user-password", &controllers.ApiController{}, "POST:CheckUserPassword")
 	beego.Router("/api/get-email-and-phone", &controllers.ApiController{}, "GET:GetEmailAndPhone")
 	beego.Router("/api/send-verification-code", &controllers.ApiController{}, "POST:SendVerificationCode")
+	beego.Router("/api/verify-code", &controllers.ApiController{}, "POST:VerifyCode")
 	beego.Router("/api/verify-captcha", &controllers.ApiController{}, "POST:VerifyCaptcha")
 	beego.Router("/api/reset-email-or-phone", &controllers.ApiController{}, "POST:ResetEmailOrPhone")
 	beego.Router("/api/get-captcha", &controllers.ApiController{}, "GET:GetCaptcha")
@@ -154,7 +156,6 @@ func initAPI() {
 	beego.Router("/api/update-token", &controllers.ApiController{}, "POST:UpdateToken")
 	beego.Router("/api/add-token", &controllers.ApiController{}, "POST:AddToken")
 	beego.Router("/api/delete-token", &controllers.ApiController{}, "POST:DeleteToken")
-	beego.Router("/api/login/oauth/code", &controllers.ApiController{}, "POST:GetOAuthCode")
 	beego.Router("/api/login/oauth/access_token", &controllers.ApiController{}, "POST:GetOAuthToken")
 	beego.Router("/api/login/oauth/refresh_token", &controllers.ApiController{}, "POST:RefreshToken")
 	beego.Router("/api/login/oauth/introspect", &controllers.ApiController{}, "POST:IntrospectToken")
@@ -187,6 +188,19 @@ func initAPI() {
 	beego.Router("/api/update-cert", &controllers.ApiController{}, "POST:UpdateCert")
 	beego.Router("/api/add-cert", &controllers.ApiController{}, "POST:AddCert")
 	beego.Router("/api/delete-cert", &controllers.ApiController{}, "POST:DeleteCert")
+
+	beego.Router("/api/get-chats", &controllers.ApiController{}, "GET:GetChats")
+	beego.Router("/api/get-chat", &controllers.ApiController{}, "GET:GetChat")
+	beego.Router("/api/update-chat", &controllers.ApiController{}, "POST:UpdateChat")
+	beego.Router("/api/add-chat", &controllers.ApiController{}, "POST:AddChat")
+	beego.Router("/api/delete-chat", &controllers.ApiController{}, "POST:DeleteChat")
+
+	beego.Router("/api/get-messages", &controllers.ApiController{}, "GET:GetMessages")
+	beego.Router("/api/get-message", &controllers.ApiController{}, "GET:GetMessage")
+	beego.Router("/api/get-message-answer", &controllers.ApiController{}, "GET:GetMessageAnswer")
+	beego.Router("/api/update-message", &controllers.ApiController{}, "POST:UpdateMessage")
+	beego.Router("/api/add-message", &controllers.ApiController{}, "POST:AddMessage")
+	beego.Router("/api/delete-message", &controllers.ApiController{}, "POST:DeleteMessage")
 
 	beego.Router("/api/get-products", &controllers.ApiController{}, "GET:GetProducts")
 	beego.Router("/api/get-product", &controllers.ApiController{}, "GET:GetProduct")
@@ -224,6 +238,15 @@ func initAPI() {
 	beego.Router("/api/webauthn/signin/begin", &controllers.ApiController{}, "Get:WebAuthnSigninBegin")
 	beego.Router("/api/webauthn/signin/finish", &controllers.ApiController{}, "Post:WebAuthnSigninFinish")
 
+	beego.Router("/api/mfa/setup/initiate", &controllers.ApiController{}, "POST:MfaSetupInitiate")
+	beego.Router("/api/mfa/setup/verify", &controllers.ApiController{}, "POST:MfaSetupVerify")
+	beego.Router("/api/mfa/setup/enable", &controllers.ApiController{}, "POST:MfaSetupEnable")
+	beego.Router("/api/delete-mfa", &controllers.ApiController{}, "POST:DeleteMfa")
+	beego.Router("/api/set-preferred-mfa", &controllers.ApiController{}, "POST:SetPreferredMfa")
+
 	beego.Router("/api/get-system-info", &controllers.ApiController{}, "GET:GetSystemInfo")
 	beego.Router("/api/get-version-info", &controllers.ApiController{}, "GET:GetVersionInfo")
+	beego.Router("/api/get-prometheus-info", &controllers.ApiController{}, "GET:GetPrometheusInfo")
+
+	beego.Handler("/api/metrics", promhttp.Handler())
 }

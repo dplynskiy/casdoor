@@ -20,7 +20,7 @@ import * as Setting from "./Setting";
 import * as SyncerBackend from "./backend/SyncerBackend";
 import i18next from "i18next";
 import BaseListPage from "./BaseListPage";
-import PopconfirmModal from "./PopconfirmModal";
+import PopconfirmModal from "./common/modal/PopconfirmModal";
 
 class SyncerListPage extends BaseListPage {
   newSyncer() {
@@ -253,7 +253,7 @@ class SyncerListPage extends BaseListPage {
 
     return (
       <div>
-        <Table scroll={{x: "max-content"}} columns={columns} dataSource={syncers} rowKey="name" size="middle" bordered pagination={paginationProps}
+        <Table scroll={{x: "max-content"}} columns={columns} dataSource={syncers} rowKey={(record) => `${record.owner}/${record.name}`} size="middle" bordered pagination={paginationProps}
           title={() => (
             <div>
               {i18next.t("general:Syncers")}&nbsp;&nbsp;&nbsp;&nbsp;

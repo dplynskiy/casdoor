@@ -16,7 +16,6 @@ package object
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/casdoor/casdoor/cred"
 	"github.com/casdoor/casdoor/i18n"
@@ -50,7 +49,7 @@ type Organization struct {
 	PasswordType       string     `xorm:"varchar(100)" json:"passwordType"`
 	PasswordSalt       string     `xorm:"varchar(100)" json:"passwordSalt"`
 	CountryCodes       []string   `xorm:"varchar(200)"  json:"countryCodes"`
-	DefaultAvatar      string     `xorm:"varchar(100)" json:"defaultAvatar"`
+	DefaultAvatar      string     `xorm:"varchar(200)" json:"defaultAvatar"`
 	DefaultApplication string     `xorm:"varchar(100)" json:"defaultApplication"`
 	Tags               []string   `xorm:"mediumtext" json:"tags"`
 	Languages          []string   `xorm:"varchar(255)" json:"languages"`
@@ -210,14 +209,14 @@ func GetAccountItemByName(name string, organization *Organization) *AccountItem 
 	return nil
 }
 
-func CheckAccountItemModifyRule(accountItem *AccountItem, user *User, lang string) (bool, string) {
+func CheckAccountItemModifyRule(accountItem *AccountItem, isAdmin bool, lang string) (bool, string) {
 	if accountItem == nil {
 		return true, ""
 	}
 
 	switch accountItem.ModifyRule {
 	case "Admin":
-		if user == nil || !user.IsAdmin && !user.IsGlobalAdmin {
+		if !isAdmin {
 			return false, fmt.Sprintf(i18n.Translate(lang, "organization:Only admin can modify the %s."), accountItem.Name)
 		}
 	case "Immutable":
@@ -299,18 +298,16 @@ func organizationChangeTrigger(oldName string, newName string) error {
 	}
 	for i, u := range role.Users {
 		// u = organization/username
-		split := strings.Split(u, "/")
-		if split[0] == oldName {
-			split[0] = newName
-			role.Users[i] = split[0] + "/" + split[1]
+		owner, name := util.GetOwnerAndNameFromId(u)
+		if name == oldName {
+			role.Users[i] = util.GetId(owner, newName)
 		}
 	}
 	for i, u := range role.Roles {
 		// u = organization/username
-		split := strings.Split(u, "/")
-		if split[0] == oldName {
-			split[0] = newName
-			role.Roles[i] = split[0] + "/" + split[1]
+		owner, name := util.GetOwnerAndNameFromId(u)
+		if name == oldName {
+			role.Roles[i] = util.GetId(owner, newName)
 		}
 	}
 	role.Owner = newName
@@ -326,18 +323,16 @@ func organizationChangeTrigger(oldName string, newName string) error {
 	}
 	for i, u := range permission.Users {
 		// u = organization/username
-		split := strings.Split(u, "/")
-		if split[0] == oldName {
-			split[0] = newName
-			permission.Users[i] = split[0] + "/" + split[1]
+		owner, name := util.GetOwnerAndNameFromId(u)
+		if name == oldName {
+			permission.Users[i] = util.GetId(owner, newName)
 		}
 	}
 	for i, u := range permission.Roles {
 		// u = organization/username
-		split := strings.Split(u, "/")
-		if split[0] == oldName {
-			split[0] = newName
-			permission.Roles[i] = split[0] + "/" + split[1]
+		owner, name := util.GetOwnerAndNameFromId(u)
+		if name == oldName {
+			permission.Roles[i] = util.GetId(owner, newName)
 		}
 	}
 	permission.Owner = newName

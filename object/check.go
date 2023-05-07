@@ -22,6 +22,7 @@ import (
 	"unicode"
 
 	"github.com/casdoor/casdoor/cred"
+	"github.com/casdoor/casdoor/form"
 	"github.com/casdoor/casdoor/i18n"
 	"github.com/casdoor/casdoor/util"
 	goldap "github.com/go-ldap/ldap/v3"
@@ -42,86 +43,86 @@ func init() {
 	reFieldWhiteList, _ = regexp.Compile(`^[A-Za-z0-9]+$`)
 }
 
-func CheckUserSignup(application *Application, organization *Organization, username string, password string, displayName string, firstName string, lastName string, email string, phone string, countryCode string, affiliation string, lang string) string {
+func CheckUserSignup(application *Application, organization *Organization, form *form.AuthForm, lang string) string {
 	if organization == nil {
 		return i18n.Translate(lang, "check:Organization does not exist")
 	}
 
 	if application.IsSignupItemVisible("Username") {
-		if len(username) <= 1 {
+		if len(form.Username) <= 1 {
 			return i18n.Translate(lang, "check:Username must have at least 2 characters")
 		}
-		if unicode.IsDigit(rune(username[0])) {
+		if unicode.IsDigit(rune(form.Username[0])) {
 			return i18n.Translate(lang, "check:Username cannot start with a digit")
 		}
-		if util.IsEmailValid(username) {
+		if util.IsEmailValid(form.Username) {
 			return i18n.Translate(lang, "check:Username cannot be an email address")
 		}
-		if reWhiteSpace.MatchString(username) {
+		if reWhiteSpace.MatchString(form.Username) {
 			return i18n.Translate(lang, "check:Username cannot contain white spaces")
 		}
 
-		if msg := CheckUsername(username, lang); msg != "" {
+		if msg := CheckUsername(form.Username, lang); msg != "" {
 			return msg
 		}
 
-		if HasUserByField(organization.Name, "name", username) {
+		if HasUserByField(organization.Name, "name", form.Username) {
 			return i18n.Translate(lang, "check:Username already exists")
 		}
-		if HasUserByField(organization.Name, "email", email) {
+		if HasUserByField(organization.Name, "email", form.Email) {
 			return i18n.Translate(lang, "check:Email already exists")
 		}
-		if HasUserByField(organization.Name, "phone", phone) {
+		if HasUserByField(organization.Name, "phone", form.Phone) {
 			return i18n.Translate(lang, "check:Phone already exists")
 		}
 	}
 
-	if len(password) <= 5 {
+	if len(form.Password) <= 5 {
 		return i18n.Translate(lang, "check:Password must have at least 6 characters")
 	}
 
 	if application.IsSignupItemVisible("Email") {
-		if email == "" {
+		if form.Email == "" {
 			if application.IsSignupItemRequired("Email") {
 				return i18n.Translate(lang, "check:Email cannot be empty")
 			}
 		} else {
-			if HasUserByField(organization.Name, "email", email) {
+			if HasUserByField(organization.Name, "email", form.Email) {
 				return i18n.Translate(lang, "check:Email already exists")
-			} else if !util.IsEmailValid(email) {
+			} else if !util.IsEmailValid(form.Email) {
 				return i18n.Translate(lang, "check:Email is invalid")
 			}
 		}
 	}
 
 	if application.IsSignupItemVisible("Phone") {
-		if phone == "" {
+		if form.Phone == "" {
 			if application.IsSignupItemRequired("Phone") {
 				return i18n.Translate(lang, "check:Phone cannot be empty")
 			}
 		} else {
-			if HasUserByField(organization.Name, "phone", phone) {
+			if HasUserByField(organization.Name, "phone", form.Phone) {
 				return i18n.Translate(lang, "check:Phone already exists")
-			} else if !util.IsPhoneAllowInRegin(countryCode, organization.CountryCodes) {
+			} else if !util.IsPhoneAllowInRegin(form.CountryCode, organization.CountryCodes) {
 				return i18n.Translate(lang, "check:Your region is not allow to signup by phone")
-			} else if !util.IsPhoneValid(phone, countryCode) {
+			} else if !util.IsPhoneValid(form.Phone, form.CountryCode) {
 				return i18n.Translate(lang, "check:Phone number is invalid")
 			}
 		}
 	}
 
 	if application.IsSignupItemVisible("Display name") {
-		if application.GetSignupItemRule("Display name") == "First, last" && (firstName != "" || lastName != "") {
-			if firstName == "" {
+		if application.GetSignupItemRule("Display name") == "First, last" && (form.FirstName != "" || form.LastName != "") {
+			if form.FirstName == "" {
 				return i18n.Translate(lang, "check:FirstName cannot be blank")
-			} else if lastName == "" {
+			} else if form.LastName == "" {
 				return i18n.Translate(lang, "check:LastName cannot be blank")
 			}
 		} else {
-			if displayName == "" {
+			if form.Name == "" {
 				return i18n.Translate(lang, "check:DisplayName cannot be blank")
 			} else if application.GetSignupItemRule("Display name") == "Real name" {
-				if !isValidRealName(displayName) {
+				if !isValidRealName(form.Name) {
 					return i18n.Translate(lang, "check:DisplayName is not valid real name")
 				}
 			}
@@ -129,7 +130,7 @@ func CheckUserSignup(application *Application, organization *Organization, usern
 	}
 
 	if application.IsSignupItemVisible("Affiliation") {
-		if affiliation == "" {
+		if form.Affiliation == "" {
 			return i18n.Translate(lang, "check:Affiliation cannot be blank")
 		}
 	}
@@ -157,10 +158,16 @@ func checkSigninErrorTimes(user *User, lang string) string {
 	return ""
 }
 
-func CheckPassword(user *User, password string, lang string) string {
+func CheckPassword(user *User, password string, lang string, options ...bool) string {
+	enableCaptcha := false
+	if len(options) > 0 {
+		enableCaptcha = options[0]
+	}
 	// check the login error times
-	if msg := checkSigninErrorTimes(user, lang); msg != "" {
-		return msg
+	if !enableCaptcha {
+		if msg := checkSigninErrorTimes(user, lang); msg != "" {
+			return msg
+		}
 	}
 
 	organization := GetOrganizationByUser(user)
@@ -182,35 +189,39 @@ func CheckPassword(user *User, password string, lang string) string {
 			return ""
 		}
 
-		return recordSigninErrorInfo(user, lang)
+		return recordSigninErrorInfo(user, lang, enableCaptcha)
 	} else {
 		return fmt.Sprintf(i18n.Translate(lang, "check:unsupported password type: %s"), organization.PasswordType)
 	}
 }
 
-func checkLdapUserPassword(user *User, password string, lang string) (*User, string) {
+func checkLdapUserPassword(user *User, password string, lang string) string {
 	ldaps := GetLdaps(user.Owner)
 	ldapLoginSuccess := false
+	hit := false
+
 	for _, ldapServer := range ldaps {
 		conn, err := ldapServer.GetLdapConn()
 		if err != nil {
 			continue
 		}
-		SearchFilter := fmt.Sprintf("(&(objectClass=posixAccount)(uid=%s))", user.Name)
-		searchReq := goldap.NewSearchRequest(ldapServer.BaseDn,
-			goldap.ScopeWholeSubtree, goldap.NeverDerefAliases, 0, 0, false,
-			SearchFilter, []string{}, nil)
+
+		searchReq := goldap.NewSearchRequest(ldapServer.BaseDn, goldap.ScopeWholeSubtree, goldap.NeverDerefAliases,
+			0, 0, false, ldapServer.buildFilterString(user), []string{}, nil)
+
 		searchResult, err := conn.Conn.Search(searchReq)
 		if err != nil {
-			return nil, err.Error()
+			return err.Error()
 		}
 
 		if len(searchResult.Entries) == 0 {
 			continue
-		} else if len(searchResult.Entries) > 1 {
-			return nil, i18n.Translate(lang, "check:Multiple accounts with same uid, please check your ldap server")
+		}
+		if len(searchResult.Entries) > 1 {
+			return i18n.Translate(lang, "check:Multiple accounts with same uid, please check your ldap server")
 		}
 
+		hit = true
 		dn := searchResult.Entries[0].DN
 		if err := conn.Conn.Bind(dn, password); err == nil {
 			ldapLoginSuccess = true
@@ -219,12 +230,19 @@ func checkLdapUserPassword(user *User, password string, lang string) (*User, str
 	}
 
 	if !ldapLoginSuccess {
-		return nil, i18n.Translate(lang, "check:Ldap user name or password incorrect")
+		if !hit {
+			return "user not exist"
+		}
+		return i18n.Translate(lang, "check:LDAP user name or password incorrect")
 	}
-	return user, ""
+	return ""
 }
 
-func CheckUserPassword(organization string, username string, password string, lang string) (*User, string) {
+func CheckUserPassword(organization string, username string, password string, lang string, options ...bool) (*User, string) {
+	enableCaptcha := false
+	if len(options) > 0 {
+		enableCaptcha = options[0]
+	}
 	user := GetUserByFields(organization, username)
 	if user == nil || user.IsDeleted == true {
 		return nil, fmt.Sprintf(i18n.Translate(lang, "general:The user: %s doesn't exist"), util.GetId(organization, username))
@@ -236,10 +254,14 @@ func CheckUserPassword(organization string, username string, password string, la
 
 	if user.Ldap != "" {
 		// ONLY for ldap users
-		return checkLdapUserPassword(user, password, lang)
+		if msg := checkLdapUserPassword(user, password, lang); msg != "" {
+			if msg == "user not exist" {
+				return nil, fmt.Sprintf(i18n.Translate(lang, "check:The user: %s doesn't exist in LDAP server"), username)
+			}
+			return nil, msg
+		}
 	} else {
-		msg := CheckPassword(user, password, lang)
-		if msg != "" {
+		if msg := CheckPassword(user, password, lang, enableCaptcha); msg != "" {
 			return nil, msg
 		}
 	}
@@ -250,10 +272,12 @@ func filterField(field string) bool {
 	return reFieldWhiteList.MatchString(field)
 }
 
-func CheckUserPermission(requestUserId, userId, userOwner string, strict bool, lang string) (bool, error) {
+func CheckUserPermission(requestUserId, userId string, strict bool, lang string) (bool, error) {
 	if requestUserId == "" {
 		return false, fmt.Errorf(i18n.Translate(lang, "general:Please login first"))
 	}
+
+	userOwner := util.GetOwnerFromId(userId)
 
 	if userId != "" {
 		targetUser := GetUser(userId)
@@ -340,7 +364,7 @@ func CheckUsername(username string, lang string) string {
 	return ""
 }
 
-func CheckUpdateUser(oldUser *User, user *User, lang string) string {
+func CheckUpdateUser(oldUser, user *User, lang string) string {
 	if user.DisplayName == "" {
 		return i18n.Translate(lang, "user:Display name cannot be empty")
 	}
@@ -367,7 +391,7 @@ func CheckUpdateUser(oldUser *User, user *User, lang string) string {
 	return ""
 }
 
-func CheckToEnableCaptcha(application *Application) bool {
+func CheckToEnableCaptcha(application *Application, organization, username string) bool {
 	if len(application.Providers) == 0 {
 		return false
 	}
@@ -377,6 +401,10 @@ func CheckToEnableCaptcha(application *Application) bool {
 			continue
 		}
 		if providerItem.Provider.Category == "Captcha" {
+			if providerItem.Rule == "Dynamic" {
+				user := GetUserByFields(organization, username)
+				return user != nil && user.SigninWrongTimes >= SigninWrongTimesLimit
+			}
 			return providerItem.Rule == "Always"
 		}
 	}

@@ -48,7 +48,7 @@ export function getEmailAndPhone(organization, username) {
 
 export function oAuthParamsToQuery(oAuthParams) {
   // login
-  if (oAuthParams === null) {
+  if (oAuthParams === null || oAuthParams === undefined) {
     return "";
   }
 
@@ -132,6 +132,16 @@ export function loginWithSaml(values, param) {
 
 export function getWechatMessageEvent() {
   return fetch(`${Setting.ServerUrl}/api/get-webhook-event`, {
+    method: "GET",
+    credentials: "include",
+    headers: {
+      "Accept-Language": Setting.getAcceptLanguage(),
+    },
+  }).then(res => res.json());
+}
+
+export function getCaptchaStatus(values) {
+  return fetch(`${Setting.ServerUrl}/api/get-captcha-status?organization=${values["organization"]}&user_id=${values["username"]}`, {
     method: "GET",
     credentials: "include",
     headers: {
