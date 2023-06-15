@@ -3,10 +3,13 @@ package af_client
 import (
 	"crypto/tls"
 	"encoding/json"
-	"github.com/casdoor/casdoor/util"
+	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"strings"
+
+	"github.com/casdoor/casdoor/util"
 )
 
 type PtAF struct {
@@ -75,7 +78,36 @@ func (af PtAF) Login(request LoginRequest) (*LoginResponse, error) {
 	return result, nil
 }
 
-func (af PtAF) CreateTenant(request TenantRequest) (*Tenant, error) {
+func (af PtAF) GetTenant(request GetTenantRequest) (*Tenant, error) {
+	body := strings.NewReader(util.StructToJson(request))
+	req, _ := http.NewRequest("GET", af.url+"auth/tenants", body)
+
+	resp, err := af.doRequest(*req)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	response, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	responseContent := string(response)
+
+	result := &Tenant{}
+
+	err = util.JsonToStruct(responseContent, result)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func (af PtAF) CreateTenant(request CreateTenantRequest) (*Tenant, error) {
 
 	body := strings.NewReader(util.StructToJson(request))
 	req, _ := http.NewRequest("POST", af.url+"auth/tenants", body)
@@ -105,24 +137,34 @@ func (af PtAF) CreateTenant(request TenantRequest) (*Tenant, error) {
 	return result, nil
 }
 
-func (af PtAF) CreateUser(request CreateUserRequest) {
+func (af PtAF) CreateUser(request CreateUserRequest) error {
 
 	body := strings.NewReader(util.StructToJson(request))
-	req, _ := http.NewRequest("POST", af.url+"auth/users", body)
+	req, err := http.NewRequest("POST", af.url+"auth/users", body)
+	if err != nil {
+		return fmt.Errorf("http.NewRequest: %w", err)
+	}
 
 	resp, err := af.doRequest(*req)
-
-	response, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return
+		return fmt.Errorf("af.doRequest: %w", err)
+	}
+
+	response, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("ioutil.ReadAll: %w", err)
 	}
 
 	responseContent := string(response)
 
-	print(responseContent)
+	if resp.StatusCode != 201 {
+		return fmt.Errorf("af.doRequest response status code: %d and body: %s", resp.StatusCode, responseContent)
+	}
+
+	return nil
 }
 
-func (af PtAF) CreateRole(token string, request Role) (string, error) {
+func (af PtAF) CreateRole(request Role) (string, error) {
 
 	body := strings.NewReader(util.StructToJson(request))
 	req, _ := http.NewRequest("POST", af.url+"auth/roles", body)

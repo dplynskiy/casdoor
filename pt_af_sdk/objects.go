@@ -13,7 +13,11 @@ type LoginResponse struct {
 	AccessToken  string `json:"access_token"`
 }
 
-type TenantRequest struct {
+type GetTenantRequest struct {
+	Name string `json:"name"`
+}
+
+type CreateTenantRequest struct {
 	Name              string                   `json:"name"`
 	Description       string                   `json:"description"`
 	IsActive          bool                     `json:"is_active"`
@@ -28,7 +32,9 @@ type TrafficProcessingRequest struct {
 type AdministratorRequest struct {
 	Email                  string `json:"email"`
 	Username               string `json:"username"`
+	Description            string `json:"description"`
 	Password               string `json:"password"`
+	IsActive               bool   `json:"is_active"`
 	PasswordChangeRequired bool   `json:"password_change_required"`
 }
 
