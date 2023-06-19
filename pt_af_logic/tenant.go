@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	beegocontext "github.com/beego/beego/context"
+	"github.com/casdoor/casdoor/conf"
 	"github.com/casdoor/casdoor/object"
 	af_client "github.com/casdoor/casdoor/pt_af_sdk"
 	"github.com/casdoor/casdoor/util"
@@ -215,7 +216,7 @@ func CreateTenant(ctx *beegocontext.Context, subscription *object.Subscription) 
 		err = notifyPTAFTenantCreated(&PTAFTenantCreatedMessage{
 			ClientName:          customer.Name,
 			ClientDisplayName:   customer.DisplayName,
-			ClientURL:           fmt.Sprintf("%s/users/%s/%s", ptlmHost, customer.Owner, customer.Name),
+			ClientURL:           fmt.Sprintf("%s/users/%s/%s", conf.GetConfigString("origin"), customer.Owner, customer.Name),
 			ServiceUserName:     serviceUserName,
 			ServiceUserPwd:      serviceUserPwd,
 			UserROName:          userROName,
