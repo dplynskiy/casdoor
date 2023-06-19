@@ -35,7 +35,7 @@ func CreateTenant(ctx *beegocontext.Context, subscription *object.Subscription) 
 		return fmt.Errorf("customerCompanyAdmin doesn't exist for company: %v", customer.Owner)
 	}
 
-	loginResp, err := af.Login(af_client.LoginRequest{
+	adminLoginResp, err := af.Login(af_client.LoginRequest{
 		Username:    afLogin,
 		Password:    afPwd,
 		Fingerprint: afFingerPrint,
@@ -44,21 +44,21 @@ func CreateTenant(ctx *beegocontext.Context, subscription *object.Subscription) 
 		return fmt.Errorf("af.Login: %w", err)
 	}
 
-	af.Token = loginResp.AccessToken
+	af.Token = adminLoginResp.AccessToken
 
 	tenantName := fmt.Sprintf("%s-%s", customer.Owner, customer.Name)
 
 	// if tenant already exists - no action required
-	tenant, err := af.GetTenant(af_client.GetTenantRequest{
-		Name: tenantName,
-	})
-	if err != nil {
-		return fmt.Errorf("af.GetTenant: %w", err)
-	}
+	if tenantID, found := customer.Properties[af_client.PtPropPref+"Tenant ID"]; found {
+		existingTenant, err := af.GetTenant(tenantID)
+		if err != nil {
+			return fmt.Errorf("af.GetTenant: %w", err)
+		}
 
-	if tenant != nil {
-		// tenant already exist
-		return nil
+		if existingTenant != nil {
+			// tenant already exist
+			return nil
+		}
 	}
 
 	tenantAdminPassword, err := generatePassword(defaultPasswordLength)
@@ -67,20 +67,28 @@ func CreateTenant(ctx *beegocontext.Context, subscription *object.Subscription) 
 	}
 
 	tenantAdminName := fmt.Sprintf("%s-%s_admin", customer.Owner, customer.Name)
-	request := af_client.CreateTenantRequest{
+
+	portalAdmin, err := object.GetUser(util.GetId(builtInOrgCode, "admin"))
+	if err != nil {
+		return fmt.Errorf("object.GetUser for portal admin: %w", err)
+	}
+
+	request := af_client.Tenant{
 		Name:     tenantName,
 		IsActive: true,
-		TrafficProcessing: af_client.TrafficProcessingRequest{
+		TrafficProcessing: af_client.TrafficProcessing{
 			TrafficProcessingType: "agent",
 		},
-		Administrator: af_client.AdministratorRequest{
-			Email:    customerCompanyAdmin.Email,
-			Username: tenantAdminName,
-			Password: tenantAdminPassword,
+		Administrator: af_client.Administrator{
+			Email:                  portalAdmin.Email,
+			Username:               tenantAdminName,
+			Password:               tenantAdminPassword,
+			IsActive:               true,
+			PasswordChangeRequired: false,
 		},
 	}
 
-	tenant, err = af.CreateTenant(request)
+	tenant, err := af.CreateTenant(request)
 	if err != nil {
 		util.LogError(ctx, err.Error())
 		return fmt.Errorf("af.CreateTenant: %w", err)
@@ -99,29 +107,38 @@ func CreateTenant(ctx *beegocontext.Context, subscription *object.Subscription) 
 		af.Token = token.AccessToken
 
 		// create proper roles
-		var serviceRole *af_client.Role
-		var userRORole *af_client.Role
-
+		var serviceRole af_client.Role
+		var userRORole af_client.Role
+		var serviceRoleFound, userRORoleFound bool
 		for _, role := range allRoles {
-			if strings.EqualFold(role.Name, "service") {
-				serviceRole = &role
+			if strings.EqualFold(role.Name, "Service") {
+				serviceRole = role
+				serviceRoleFound = true
 			}
 
 			if strings.EqualFold(role.Name, "User RO") {
-				userRORole = &role
+				userRORole = role
+				userRORoleFound = true
 			}
 		}
 
-		if serviceRole == nil {
+		if !serviceRoleFound {
 			return fmt.Errorf("no service role found")
 		}
 
-		if userRORole == nil {
+		if !userRORoleFound {
 			return fmt.Errorf("no user RO role found")
 		}
 
-		userRoleID, _ := af.CreateRole(*userRORole)
-		serviceRoleID, _ := af.CreateRole(*serviceRole)
+		userRoleID, err := af.CreateRole(userRORole)
+		if err != nil {
+			return fmt.Errorf("af.CreateRole(userRole): %w", err)
+		}
+
+		serviceRoleID, err := af.CreateRole(serviceRole)
+		if err != nil {
+			return fmt.Errorf("af.CreateRole(serviceRole): %w", err)
+		}
 
 		// create users
 		userROName := fmt.Sprintf("%s_%s", customer.Name, customer.Owner)
@@ -162,6 +179,19 @@ func CreateTenant(ctx *beegocontext.Context, subscription *object.Subscription) 
 			return fmt.Errorf("af.CreateUser with service role: %w", err)
 		}
 
+		// disable tenant admin account
+		af.Token = adminLoginResp.AccessToken
+		err = af.UpdateTenant(af_client.Tenant{
+			ID:       tenant.ID,
+			IsActive: true,
+			Administrator: af_client.Administrator{
+				IsActive: false,
+			},
+		})
+		if err != nil {
+			return fmt.Errorf("af.UpdateTenant(disable admin password): %w", err)
+		}
+
 		// update customer properties
 		if customer.Properties == nil {
 			customer.Properties = make(map[string]string)
@@ -192,7 +222,7 @@ func CreateTenant(ctx *beegocontext.Context, subscription *object.Subscription) 
 			UserROPwd:           userROPwd,
 			TenantAdminName:     tenantAdminName,
 			TenantAdminPassword: tenantAdminPassword,
-			PTAFLoginLink:       afHost,
+			PTAFLoginLink:       util.GetUrlHost(afHost),
 		}, customerCompanyAdmin.Email)
 		if err != nil {
 			return fmt.Errorf("notifyPTAFTenantCreated: %w", err)

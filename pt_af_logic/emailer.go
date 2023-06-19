@@ -51,9 +51,6 @@ type PTAFTenantCreatedMessage struct {
 	PTAFLoginLink       string
 }
 
-// default organization
-const builtInOrgCode = "built-in"
-
 const subscriptionStateChangeEmailSubject = `Subscription status changed`
 
 func notifyPTAFTenantCreated(msg *PTAFTenantCreatedMessage, email string) error {
