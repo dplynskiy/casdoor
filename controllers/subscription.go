@@ -115,7 +115,7 @@ func (c *ApiController) UpdateSubscription() {
 		return
 	}
 
-	err = pt_af_logic.CheckSubscriptionUpdate(currentUser, &subscription, old)
+	err = pt_af_logic.ValidateSubscriptionUpdate(currentUser, &subscription, old)
 	if err != nil {
 		c.ResponseError(err.Error())
 		return

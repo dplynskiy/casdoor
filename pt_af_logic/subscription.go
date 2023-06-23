@@ -24,8 +24,8 @@ func getUserRole(user *object.User) PTAFLTypes.UserRole {
 
 }
 
-// CheckSubscriptionStateIsAllowed checks if user has permission to assign a new subscription state
-func CheckSubscriptionStateIsAllowed(subscriptionRole PTAFLTypes.UserRole, oldStateName, nextStateName PTAFLTypes.SubscriptionStateName) error {
+// ValidateSubscriptionStateIsAllowed checks if user has permission to assign a new subscription state
+func ValidateSubscriptionStateIsAllowed(subscriptionRole PTAFLTypes.UserRole, oldStateName, nextStateName PTAFLTypes.SubscriptionStateName) error {
 	if oldStateName == nextStateName {
 		return nil
 	}
@@ -47,8 +47,8 @@ func CheckSubscriptionStateIsAllowed(subscriptionRole PTAFLTypes.UserRole, oldSt
 	return nil
 }
 
-// CheckSubscriptionFieldsChangeIsAllowed checks if user has permission to change fields
-func CheckSubscriptionFieldsChangeIsAllowed(
+// ValidateSubscriptionFieldsChangeIsAllowed checks if user has permission to change fields
+func ValidateSubscriptionFieldsChangeIsAllowed(
 	userRole PTAFLTypes.UserRole,
 	old, new *object.Subscription,
 ) error {
@@ -132,7 +132,7 @@ func CheckSubscriptionFieldsChangeIsAllowed(
 	return nil
 }
 
-func CheckSubscriptionUpdate(user *object.User, subscription *object.Subscription, old *object.Subscription) error {
+func ValidateSubscriptionUpdate(user *object.User, subscription *object.Subscription, old *object.Subscription) error {
 	subscriptionRole := getUserRole(user)
 
 	if subscriptionRole == PTAFLTypes.UserRoleGlobalAdmin {
@@ -142,12 +142,12 @@ func CheckSubscriptionUpdate(user *object.User, subscription *object.Subscriptio
 	oldStateName := PTAFLTypes.SubscriptionStateName(old.State)
 	newStateName := PTAFLTypes.SubscriptionStateName(subscription.State)
 
-	err := CheckSubscriptionStateIsAllowed(subscriptionRole, oldStateName, newStateName)
+	err := ValidateSubscriptionStateIsAllowed(subscriptionRole, oldStateName, newStateName)
 	if err != nil {
 		return err
 	}
 
-	err = CheckSubscriptionFieldsChangeIsAllowed(subscriptionRole, old, subscription)
+	err = ValidateSubscriptionFieldsChangeIsAllowed(subscriptionRole, old, subscription)
 	if err != nil {
 		return err
 	}
