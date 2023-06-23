@@ -5,13 +5,13 @@ import (
 	"strings"
 )
 
-type SubscriptionRole int
+type UserRole int
 
 const (
-	SubscriptionRoleUnknown SubscriptionRole = iota
-	SubscriptionRoleGlobalAdmin
-	SubscriptionRolePartner
-	SubscriptionRoleDistributor
+	UserRoleUnknown UserRole = iota
+	UserRoleGlobalAdmin
+	UserRolePartner
+	UserRoleDistributor
 )
 
 type SubscriptionStateName string
@@ -81,8 +81,8 @@ func (s SubscriptionFieldNames) Contains(name SubscriptionFieldName) bool {
 	return false
 }
 
-type SubscriptionFieldPermissions map[SubscriptionRole]SubscriptionFieldNames
-type SubscriptionTransitions map[SubscriptionRole]SubscriptionStateNames
+type SubscriptionFieldPermissions map[UserRole]SubscriptionFieldNames
+type SubscriptionTransitions map[UserRole]SubscriptionStateNames
 type SubscriptionState struct {
 	FieldPermissions SubscriptionFieldPermissions
 	Transitions      SubscriptionTransitions
@@ -91,7 +91,7 @@ type SubscriptionState struct {
 var SubscriptionStateMap = map[SubscriptionStateName]SubscriptionState{
 	SubscriptionNew: {
 		FieldPermissions: SubscriptionFieldPermissions{
-			SubscriptionRolePartner: {
+			UserRolePartner: {
 				SubscriptionFieldNameName,
 				SubscriptionFieldNameDisplayName,
 				SubscriptionFieldNameSubUser,
@@ -101,12 +101,12 @@ var SubscriptionStateMap = map[SubscriptionStateName]SubscriptionState{
 			},
 		},
 		Transitions: SubscriptionTransitions{
-			SubscriptionRolePartner: SubscriptionStateNames{SubscriptionPending},
+			UserRolePartner: SubscriptionStateNames{SubscriptionPending},
 		},
 	},
 	SubscriptionPending: {
 		FieldPermissions: SubscriptionFieldPermissions{
-			SubscriptionRolePartner: {
+			UserRolePartner: {
 				SubscriptionFieldNameDisplayName,
 				SubscriptionFieldNameSubPlan,
 				SubscriptionFieldNameDiscount,
@@ -117,18 +117,18 @@ var SubscriptionStateMap = map[SubscriptionStateName]SubscriptionState{
 	},
 	SubscriptionPreAuthorized: {
 		FieldPermissions: SubscriptionFieldPermissions{
-			SubscriptionRolePartner: {
+			UserRolePartner: {
 				SubscriptionFieldNameDisplayName,
 				SubscriptionFieldNameDescription,
 			},
 		},
 		Transitions: SubscriptionTransitions{
-			SubscriptionRolePartner: SubscriptionStateNames{SubscriptionAuthorized, SubscriptionCancelled},
+			UserRolePartner: SubscriptionStateNames{SubscriptionAuthorized, SubscriptionCancelled},
 		},
 	},
 	SubscriptionUnauthorized: {
 		FieldPermissions: SubscriptionFieldPermissions{
-			SubscriptionRolePartner: {
+			UserRolePartner: {
 				SubscriptionFieldNameDisplayName,
 				SubscriptionFieldNameSubPlan,
 				SubscriptionFieldNameDiscount,
@@ -136,47 +136,47 @@ var SubscriptionStateMap = map[SubscriptionStateName]SubscriptionState{
 			},
 		},
 		Transitions: SubscriptionTransitions{
-			SubscriptionRolePartner: SubscriptionStateNames{SubscriptionPending, SubscriptionCancelled},
+			UserRolePartner: SubscriptionStateNames{SubscriptionPending, SubscriptionCancelled},
 		},
 	},
 	SubscriptionAuthorized: {
 		FieldPermissions: SubscriptionFieldPermissions{
-			SubscriptionRoleDistributor: {
+			UserRoleDistributor: {
 				SubscriptionFieldNameDisplayName,
 				SubscriptionFieldNameStartDate,
 				SubscriptionFieldNameDescription,
 			},
 		},
 		Transitions: SubscriptionTransitions{
-			SubscriptionRoleDistributor: SubscriptionStateNames{SubscriptionStarted, SubscriptionCancelled},
+			UserRoleDistributor: SubscriptionStateNames{SubscriptionStarted, SubscriptionCancelled},
 		},
 	},
 	SubscriptionStarted: {
 		FieldPermissions: SubscriptionFieldPermissions{
-			SubscriptionRolePartner: {
+			UserRolePartner: {
 				SubscriptionFieldNameDisplayName,
 				SubscriptionFieldNameDescription,
 			},
 		},
 		Transitions: SubscriptionTransitions{
-			SubscriptionRolePartner: SubscriptionStateNames{SubscriptionPreFinished},
+			UserRolePartner: SubscriptionStateNames{SubscriptionPreFinished},
 		},
 	},
 	SubscriptionPreFinished: {
 		FieldPermissions: SubscriptionFieldPermissions{
-			SubscriptionRoleDistributor: {
+			UserRoleDistributor: {
 				SubscriptionFieldNameDisplayName,
 				SubscriptionFieldNameEndDate,
 				SubscriptionFieldNameDescription,
 			},
 		},
 		Transitions: SubscriptionTransitions{
-			SubscriptionRoleDistributor: SubscriptionStateNames{SubscriptionFinished},
+			UserRoleDistributor: SubscriptionStateNames{SubscriptionFinished},
 		},
 	},
 	SubscriptionFinished: {
 		FieldPermissions: SubscriptionFieldPermissions{
-			SubscriptionRolePartner: {
+			UserRolePartner: {
 				SubscriptionFieldNameDisplayName,
 				SubscriptionFieldNameDescription,
 			},
@@ -185,7 +185,7 @@ var SubscriptionStateMap = map[SubscriptionStateName]SubscriptionState{
 	},
 	SubscriptionCancelled: {
 		FieldPermissions: SubscriptionFieldPermissions{
-			SubscriptionRolePartner: {
+			UserRolePartner: {
 				SubscriptionFieldNameDisplayName,
 				SubscriptionFieldNameDescription,
 			},

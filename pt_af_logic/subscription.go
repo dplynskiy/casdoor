@@ -9,23 +9,23 @@ import (
 	"github.com/casdoor/casdoor/util"
 )
 
-func getSubscriptionRole(user *object.User) PTAFLTypes.SubscriptionRole {
+func getUserRole(user *object.User) PTAFLTypes.UserRole {
 	if user.IsGlobalAdmin {
-		return PTAFLTypes.SubscriptionRoleGlobalAdmin
+		return PTAFLTypes.UserRoleGlobalAdmin
 	}
 
 	if user.IsAdmin {
-		return PTAFLTypes.SubscriptionRolePartner
+		return PTAFLTypes.UserRolePartner
 	}
 
-	//todo: add check for PTAFLTypes.SubscriptionRoleDistributor
+	//todo: add check for PTAFLTypes.UserRoleDistributor
 
-	return PTAFLTypes.SubscriptionRoleUnknown
+	return PTAFLTypes.UserRoleUnknown
 
 }
 
 // CheckSubscriptionStateIsAllowed checks if user has permission to assign a new subscription state
-func CheckSubscriptionStateIsAllowed(subscriptionRole PTAFLTypes.SubscriptionRole, oldStateName, nextStateName PTAFLTypes.SubscriptionStateName) error {
+func CheckSubscriptionStateIsAllowed(subscriptionRole PTAFLTypes.UserRole, oldStateName, nextStateName PTAFLTypes.SubscriptionStateName) error {
 	if oldStateName == nextStateName {
 		return nil
 	}
@@ -49,7 +49,7 @@ func CheckSubscriptionStateIsAllowed(subscriptionRole PTAFLTypes.SubscriptionRol
 
 // CheckSubscriptionFieldsChangeIsAllowed checks if user has permission to change fields
 func CheckSubscriptionFieldsChangeIsAllowed(
-	subscriptionRole PTAFLTypes.SubscriptionRole,
+	userRole PTAFLTypes.UserRole,
 	old, new *object.Subscription,
 ) error {
 	oldState, ok := PTAFLTypes.SubscriptionStateMap[PTAFLTypes.SubscriptionStateName(old.State)]
@@ -62,8 +62,8 @@ func CheckSubscriptionFieldsChangeIsAllowed(
 		return fmt.Errorf("incorrect state: %s", new.State)
 	}
 
-	oldRoleFieldPermission := oldState.FieldPermissions[subscriptionRole]
-	newRoleFieldPermission := newState.FieldPermissions[subscriptionRole]
+	oldRoleFieldPermission := oldState.FieldPermissions[userRole]
+	newRoleFieldPermission := newState.FieldPermissions[userRole]
 
 	if old.Name != new.Name {
 		oldContains := oldRoleFieldPermission.Contains(PTAFLTypes.SubscriptionFieldNameName)
@@ -133,9 +133,9 @@ func CheckSubscriptionFieldsChangeIsAllowed(
 }
 
 func CheckSubscriptionUpdate(user *object.User, subscription *object.Subscription, old *object.Subscription) error {
-	subscriptionRole := getSubscriptionRole(user)
+	subscriptionRole := getUserRole(user)
 
-	if subscriptionRole == PTAFLTypes.SubscriptionRoleGlobalAdmin {
+	if subscriptionRole == PTAFLTypes.UserRoleGlobalAdmin {
 		return nil
 	}
 
