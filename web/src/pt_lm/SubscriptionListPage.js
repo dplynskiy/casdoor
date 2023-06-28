@@ -210,11 +210,13 @@ class SubscriptionListPage extends BaseListPage {
           return (
             <div>
               <Button style={{marginTop: "10px", marginBottom: "10px", marginRight: "10px"}} type="primary" onClick={() => this.props.history.push(`/subscriptions/${record.owner}/${record.name}`)}>{i18next.t("general:Edit")}</Button>
-              <PopconfirmModal
-                title={i18next.t("general:Sure to delete") + `: ${record.name} ?`}
-                onConfirm={() => this.deleteSubscription(index)}
-              >
-              </PopconfirmModal>
+              {!Setting.isDistributor(this.props.account) &&
+                <PopconfirmModal
+                  title={i18next.t("general:Sure to delete") + `: ${record.name} ?`}
+                  onConfirm={() => this.deleteSubscription(index)}
+                >
+                </PopconfirmModal>
+              }
             </div>
           );
         },
@@ -234,7 +236,13 @@ class SubscriptionListPage extends BaseListPage {
           title={() => (
             <div>
               {i18next.t("general:Subscriptions")}&nbsp;&nbsp;&nbsp;&nbsp;
-              <Button type="primary" size="small" onClick={this.addSubscription.bind(this)}>{i18next.t("general:Add")}</Button>
+              <Button
+                type="primary"
+                size="small"
+                onClick={this.addSubscription.bind(this)}
+                style={{visibility: Setting.isDistributor(this.props.account) ? "hidden" : null}}>
+                {i18next.t("general:Add")}
+              </Button>
             </div>
           )}
           loading={this.state.loading}
