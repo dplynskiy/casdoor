@@ -32,8 +32,8 @@ class OrganizationListPage extends BaseListPage {
       displayName: `New Organization - ${randomName}`,
       websiteUrl: "https://door.casdoor.com",
       favicon: `${Setting.StaticBaseUrl}/img/favicon.png`,
-      passwordType: "plain",
-      PasswordSalt: "",
+      passwordType: "bcrypt",
+      PasswordSalt: Setting.getRandomName(),
       countryCodes: ["RU"],
       defaultAvatar: "https://static.vecteezy.com/system/resources/thumbnails/000/439/863/small/Basic_Ui__28186_29.jpg",
       defaultApplication: "",
@@ -51,12 +51,12 @@ class OrganizationListPage extends BaseListPage {
       manager: "",
       accountItems: [
         {name: "Organization", visible: true, viewRule: "Public", modifyRule: "Admin"},
-        {name: "ID", visible: true, viewRule: "Public", modifyRule: "Immutable"},
+        {name: "ID", visible: false, viewRule: "Public", modifyRule: "Immutable"},
         {name: "Name", visible: true, viewRule: "Public", modifyRule: "Admin"},
         {name: "Display name", visible: true, viewRule: "Public", modifyRule: "Self"},
-        {name: "Avatar", visible: true, viewRule: "Public", modifyRule: "Self"},
-        {name: "User type", visible: true, viewRule: "Public", modifyRule: "Admin"},
-        {name: "Password", visible: false, viewRule: "Self", modifyRule: "Self"},
+        {name: "Avatar", visible: false, viewRule: "Public", modifyRule: "Self"},
+        {name: "User type", visible: false, viewRule: "Public", modifyRule: "Admin"},
+        {name: "Password", visible: true, viewRule: "Admin", modifyRule: "Admin"},
         {name: "Email", visible: true, viewRule: "Public", modifyRule: "Self"},
         {name: "Phone", visible: true, viewRule: "Public", modifyRule: "Self"},
         {name: "Country/Region", visible: false, viewRule: "Public", modifyRule: "Self"},
@@ -65,7 +65,7 @@ class OrganizationListPage extends BaseListPage {
         {name: "Title", visible: false, viewRule: "Public", modifyRule: "Self"},
         {name: "Homepage", visible: false, viewRule: "Public", modifyRule: "Self"},
         {name: "Bio", visible: false, viewRule: "Public", modifyRule: "Self"},
-        {name: "Tag", visible: true, viewRule: "Public", modifyRule: "Admin"},
+        {name: "Tag", visible: true, viewRule: "Public", modifyRule: "Immutable"},
         {name: "Signup application", visible: false, viewRule: "Public", modifyRule: "Admin"},
         {name: "Roles", visible: false, viewRule: "Public", modifyRule: "Immutable"},
         {name: "Permissions", visible: false, viewRule: "Public", modifyRule: "Immutable"},
@@ -103,7 +103,9 @@ class OrganizationListPage extends BaseListPage {
           Setting.showMessage("success", i18next.t("general:Successfully deleted"));
           this.setState({
             data: Setting.deleteRow(this.state.data, i),
-            pagination: {total: this.state.pagination.total - 1},
+            pagination: {
+              ...this.state.pagination,
+              total: this.state.pagination.total - 1},
           });
           window.dispatchEvent(new Event("storageOrganizationsChanged"));
         } else {
