@@ -65,7 +65,7 @@ func CreateTenant(ctx *beegocontext.Context, subscription *object.Subscription) 
 		return fmt.Errorf("generatePassword for admin: %w", err)
 	}
 
-	tenantAdminName := fmt.Sprintf("%s-%s_admin", customer.Owner, customer.Name)
+	tenantAdminName := fmt.Sprintf("%s_%s_admin", customer.Owner, customer.Name)
 
 	portalAdmin, err := object.GetUser(util.GetId(builtInOrgCode, "admin"))
 	if err != nil {
@@ -207,7 +207,6 @@ func CreateTenant(ctx *beegocontext.Context, subscription *object.Subscription) 
 		customer.Properties[af_client.PtPropPref+"Connection String"] = connectionString
 		customer.Properties[af_client.PtPropPref+"ClientAccountLogin"] = userROName
 		customer.Properties[af_client.PtPropPref+"ServiceAccountLogin"] = serviceUserName
-		customer.Properties[af_client.PtPropPref+"TenantAdminAccountLogin"] = tenantAdminName
 
 		affected, err := object.UpdateUser(customer.GetId(), customer, []string{"properties"}, false)
 		if err != nil {
