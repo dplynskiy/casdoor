@@ -2,6 +2,7 @@ package pt_af_logic
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"html/template"
@@ -18,6 +19,7 @@ import (
 
 type Message struct {
 	Action                string            `json:"action"`
+	SubscriptionId        string            `json:"subscriptionId"`
 	ClientShortName       string            `json:"clientShortName"`
 	ClientProperties      map[string]string `json:"clientProperties"`
 	ClientContact         ContactData       `json:"clientContact"`
@@ -25,6 +27,8 @@ type Message struct {
 	Plan                  string            `json:"plan"`
 	PartnerShortName      string            `json:"partnerShortName"`
 	PartnerManagerContact ContactData       `json:"partnerManagerContact"`
+	PartnerProperties     map[string]string `json:"partnerProperties"`
+	Discount              int               `json:"sale"`
 }
 
 type ContactData struct {
@@ -279,18 +283,36 @@ func NotifySubscriptionUpdated(ctx *context.Context, actor *object.User, current
 				util.LogError(ctx, fmt.Errorf("NotifyPartnerSubscriptionUpdated: %w", err).Error())
 			}
 		}
-	case PTAFLTypes.SubscriptionAuthorized.String(), PTAFLTypes.SubscriptionPreFinished.String():
+	case PTAFLTypes.SubscriptionStarted.String(), PTAFLTypes.SubscriptionFinished.String():
+		if stateChanged {
+			err := NotifyCRMSubscriptionUpdated(actor, current, old)
+			if err != nil {
+				util.LogError(ctx, fmt.Errorf("NotifyCRMSubscriptionUpdated: %w", err).Error())
+			}
+		}
+	case PTAFLTypes.SubscriptionAuthorized.String():
 		if stateChanged {
 			err := NotifyDistributorSubscriptionUpdated(ctx, actor, current, old)
 			if err != nil {
-				util.LogError(ctx, fmt.Errorf("NotifyAdminDistributorSubscriptionUpdated(distributors): %w", err).Error())
+				util.LogError(ctx, fmt.Errorf("NotifyDistributorSubscriptionUpdated: %w", err).Error())
+			}
+			err = NotifyCRMSubscriptionUpdated(actor, current, old)
+			if err != nil {
+				util.LogError(ctx, fmt.Errorf("NotifyCRMSubscriptionUpdated: %w", err).Error())
+			}
+		}
+	case PTAFLTypes.SubscriptionPreFinished.String():
+		if stateChanged {
+			err := NotifyDistributorSubscriptionUpdated(ctx, actor, current, old)
+			if err != nil {
+				util.LogError(ctx, fmt.Errorf("NotifyDistributorSubscriptionUpdated: %w", err).Error())
 			}
 		}
 	case PTAFLTypes.SubscriptionIntoCommerce.String(), PTAFLTypes.SubscriptionPending.String():
 		if stateChanged {
 			err := NotifyAdminSubscriptionUpdated(actor, current, old)
 			if err != nil {
-				util.LogError(ctx, fmt.Errorf("NotifyAdminDistributorSubscriptionUpdated(admins): %w", err).Error())
+				util.LogError(ctx, fmt.Errorf("NotifyAdminSubscriptionUpdated: %w", err).Error())
 			}
 		}
 	}
@@ -609,4 +631,85 @@ func getSubscriptionUpdateMessage(actor *object.User, current, old *object.Subsc
 		ClientKPP:                  client.Properties["КПП"],
 		WasPilot:                   wasPilot,
 	}, nil
+}
+
+func NotifyCRMSubscriptionUpdated(actor *object.User, current, old *object.Subscription) error {
+	provider := getBuiltInEmailProvider()
+	if provider == nil {
+		return errors.New("no email provider registered")
+	}
+	if current.User == "" {
+		return errors.New("no client detected in subscription")
+	}
+
+	orgId := fmt.Sprintf("admin/%s", current.Owner)
+	organization, err := object.GetOrganization(orgId)
+	if err != nil {
+		return fmt.Errorf("object.GetOrganization: %w", err)
+	}
+
+	client, err := object.GetUser(current.User)
+	if err != nil {
+		return fmt.Errorf("object.GetUser: %w", err)
+	}
+
+	msg := Message{
+		Action:          current.State,
+		SubscriptionId:  current.Name,
+		Plan:            current.Plan,
+		ClientShortName: client.Name,
+		ClientContact: ContactData{
+			Email: client.Email,
+			Phone: client.Phone,
+			Name:  client.DisplayName,
+		},
+		ClientProperties: map[string]string{
+			"ИНН": client.Properties["ИНН"],
+			"КПП": client.Properties["КПП"],
+		},
+		PartnerShortName: organization.Name,
+		PartnerManagerContact: ContactData{
+			Email: organization.Email,
+			Phone: organization.Phone,
+			Name:  organization.Manager,
+		},
+		PartnerProperties: map[string]string{
+			"ИНН": organization.Properties["ИНН"],
+			"КПП": organization.Properties["КПП"],
+		},
+		Product:  "PT Application Firewall",
+		Discount: current.Discount,
+	}
+
+	var titleTemplate string
+	switch current.State {
+	case PTAFLTypes.SubscriptionAuthorized.String():
+		titleTemplate = SubscriptionCreatedSubjCrmTmpl
+	case PTAFLTypes.SubscriptionStarted.String(), PTAFLTypes.SubscriptionFinished.String():
+		titleTemplate = SubscriptionUpdatedSubjCrmTmpl
+	}
+
+	titleTmpl, err := template.New("").Parse(titleTemplate)
+	if err != nil {
+		return fmt.Errorf("template.Parse(title): %w", err)
+	}
+
+	var titleBuf bytes.Buffer
+	err = titleTmpl.Execute(&titleBuf, msg)
+	if err != nil {
+		return fmt.Errorf("titleTmpl.Execute: %w", err)
+	}
+
+	data, err := json.Marshal(msg)
+	content := string(data)
+	if err != nil {
+		return err
+	}
+
+	err = object.SendEmailWithContentType(provider, titleBuf.String(), content, crmEmail, provider.DisplayName, "text/plain")
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
