@@ -40,8 +40,11 @@ func (c *ApiController) GetSubscriptions() {
 	sortField := c.Input().Get("sortField")
 	sortOrder := c.Input().Get("sortOrder")
 
+	user := c.getCurrentUser()
+	filter := pt_af_logic.GetSubscriptionFilter(user)
+
 	if limit == "" || page == "" {
-		subscriptions, err := object.GetSubscriptions(owner)
+		subscriptions, err := object.GetSubscriptions(owner, filter)
 		if err != nil {
 			c.ResponseError(err.Error())
 			return
@@ -50,9 +53,6 @@ func (c *ApiController) GetSubscriptions() {
 		c.Data["json"] = subscriptions
 		c.ServeJSON()
 	} else {
-		user := c.getCurrentUser()
-		filter := pt_af_logic.GetSubscriptionFilter(user)
-
 		limit := util.ParseInt(limit)
 		count, err := object.GetSubscriptionCount(owner, field, value, filter)
 		if err != nil {
@@ -129,29 +129,14 @@ func (c *ApiController) UpdateSubscription() {
 		return
 	}
 
-	err = pt_af_logic.ValidateSubscriptionUpdate(currentUser, &subscription, old)
+	affected, err := pt_af_logic.ProcessSubscriptionUpdate(c.Ctx, currentUser, &subscription, old)
 	if err != nil {
 		c.ResponseError(err.Error())
 		return
 	}
 
-	// fills some calculated subscription fields for transition to state
-	err = pt_af_logic.FillSubscriptionByState(currentUser, &subscription, old)
-	if err != nil {
-		c.ResponseError(err.Error())
-		return
-	}
-
-	affected, err := object.UpdateSubscription(id, &subscription)
 	c.Data["json"] = wrapActionResponse(affected, err)
 	c.ServeJSON()
-
-	if affected {
-		util.SafeGoroutine(func() {
-			pt_af_logic.ProcessSubscriptionUpdatePostActions(c.Ctx, currentUser, &subscription, old)
-		})
-
-	}
 }
 
 // AddSubscription

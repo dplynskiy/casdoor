@@ -511,15 +511,8 @@ func getSubscriptionUpdateMessage(actor *object.User, current, old *object.Subsc
 		currentPlanName = plan.Name
 	}
 
-	submitter, err := object.GetUser(current.Submitter)
-	if err != nil {
-		return nil, fmt.Errorf("object.GetUser(submitter): %w", err)
-	}
-
-	approver, err := object.GetUser(current.Approver)
-	if err != nil {
-		return nil, fmt.Errorf("object.GetUser(approver): %w", err)
-	}
+	submitterOwner, submitterName := util.GetOwnerAndNameFromId(current.Submitter)
+	approverOwner, approverName := util.GetOwnerAndNameFromId(current.Approver)
 
 	mskLoc, err := time.LoadLocation("Europe/Moscow")
 	if err != nil {
@@ -581,10 +574,10 @@ func getSubscriptionUpdateMessage(actor *object.User, current, old *object.Subsc
 		SubscriptionDescription:    current.Description,
 		OldSubscriptionComment:     old.Comment,
 		SubscriptionComment:        current.Comment,
-		SubscriptionCreator:        submitter.Name,
-		SubscriptionCreatorURL:     fmt.Sprintf("%s/users/%s/%s", conf.GetConfigString("origin"), submitter.Owner, submitter.Name),
-		SubscriptionMover:          approver.Name,
-		SubscriptionMoverURL:       fmt.Sprintf("%s/users/%s/%s", conf.GetConfigString("origin"), approver.Owner, approver.Name),
+		SubscriptionCreator:        submitterName,
+		SubscriptionCreatorURL:     fmt.Sprintf("%s/users/%s/%s", conf.GetConfigString("origin"), submitterOwner, submitterName),
+		SubscriptionMover:          approverName,
+		SubscriptionMoverURL:       fmt.Sprintf("%s/users/%s/%s", conf.GetConfigString("origin"), approverOwner, approverName),
 		SubscriptionMoveTime:       approverTime.In(mskLoc).Format("2006-01-02 15:04:05"),
 		SubscriptionEditor:         actor.Name,
 		SubscriptionEditorURL:      fmt.Sprintf("%s/users/%s/%s", conf.GetConfigString("origin"), actor.Owner, actor.Name),
