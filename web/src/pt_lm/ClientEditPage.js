@@ -635,7 +635,7 @@ class UserEditPage extends React.Component {
             {Setting.getLabel(i18next.t("user:Атрибуты"), i18next.t("user:Properties - Tooltip"))} :
           </Col>
           <Col span={22} >
-            <PropertyTable properties={this.state.user.properties} onUpdateTable={(value) => {this.updateUserField("properties", value);}} />
+            <PropertyTable properties={this.state.user.properties} account={this.props.account} onUpdateTable={(value) => {this.updateUserField("properties", value);}} />
           </Col>
         </Row>
       );

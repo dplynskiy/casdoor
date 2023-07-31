@@ -24,6 +24,7 @@ import (
 	"github.com/casdoor/casdoor/object"
 	"github.com/casdoor/casdoor/pt_af_logic"
 	"github.com/casdoor/casdoor/pt_af_logic/notify"
+	PTAFLTypes "github.com/casdoor/casdoor/pt_af_logic/types"
 	"github.com/casdoor/casdoor/util"
 )
 
@@ -271,9 +272,26 @@ func (c *ApiController) UpdateUser() {
 		return
 	}
 
-	if !oldUser.IsGlobalAdmin && oldUser.IsGlobalAdmin != user.IsGlobalAdmin {
+	currentUser := c.getCurrentUser()
+	if currentUser == nil {
 		c.ResponseError(c.T("auth:Unauthorized operation"))
 		return
+	}
+
+	if !currentUser.IsGlobalAdmin && oldUser.IsGlobalAdmin != user.IsGlobalAdmin {
+		c.ResponseError(c.T("auth:Unauthorized operation"))
+		return
+	}
+
+	if user.Tag == "client" && !currentUser.IsGlobalAdmin {
+		for _, ptProp := range PTAFLTypes.PtProps {
+			oldPropValue, oldFoundKey := oldUser.Properties[ptProp]
+			newPropValue, newFoundKey := user.Properties[ptProp]
+			if newFoundKey != oldFoundKey || newPropValue != oldPropValue {
+				c.ResponseError(c.T("auth:Unauthorized operation"))
+				return
+			}
+		}
 	}
 
 	if msg := object.CheckUpdateUser(oldUser, &user, c.GetAcceptLanguage()); msg != "" {
@@ -353,6 +371,12 @@ func (c *ApiController) AddUser() {
 	if msg != "" {
 		c.ResponseError(msg)
 		return
+	}
+
+	if user.Tag == "client" {
+		for _, ptProp := range PTAFLTypes.PtProps {
+			user.Properties[ptProp] = ""
+		}
 	}
 
 	c.Data["json"] = wrapActionResponse(object.AddUser(&user))

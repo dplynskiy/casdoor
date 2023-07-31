@@ -50,7 +50,7 @@ func CreateOrEnableTenant(subscription *object.Subscription) error {
 	tenantName := fmt.Sprintf("%s - %s", customer.Owner, customer.Name)
 
 	// if tenant already exists - no action required
-	if tenantID, found := customer.Properties[af_client.PtPropPref+"Tenant ID"]; found {
+	if tenantID, found := customer.Properties[PTAFLTypes.PtPropTenantID]; found && tenantID != "" {
 		existingTenant, err := af.GetTenant(tenantID)
 		if err != nil {
 			return fmt.Errorf("af.GetTenant: %w", err)
@@ -239,12 +239,12 @@ func CreateOrEnableTenant(subscription *object.Subscription) error {
 			customer.Properties = make(map[string]string)
 		}
 
-		customer.Properties[af_client.PtPropPref+"Tenant Name"] = tenantName
-		customer.Properties[af_client.PtPropPref+"Tenant ID"] = tenant.ID
-		customer.Properties[af_client.PtPropPref+"Connection String"] = connectionString
-		customer.Properties[af_client.PtPropPref+"ClientAccountLogin"] = userROName
-		customer.Properties[af_client.PtPropPref+"ClientControlAccountLogin"] = userName
-		customer.Properties[af_client.PtPropPref+"ServiceAccountLogin"] = serviceUserName
+		customer.Properties[PTAFLTypes.PtPropTenantName] = tenantName
+		customer.Properties[PTAFLTypes.PtPropTenantID] = tenant.ID
+		customer.Properties[PTAFLTypes.PtPropConnString] = connectionString
+		customer.Properties[PTAFLTypes.PtPropClientAccLogin] = userROName
+		customer.Properties[PTAFLTypes.PtPropClientControlAccLogin] = userName
+		customer.Properties[PTAFLTypes.PtPropServiceAccLogin] = serviceUserName
 
 		affected, err := object.UpdateUser(customer.GetId(), customer, []string{"properties"}, false)
 		if err != nil {

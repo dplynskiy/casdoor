@@ -5,6 +5,7 @@ import (
 
 	"github.com/casdoor/casdoor/conf"
 	"github.com/casdoor/casdoor/object"
+	"github.com/casdoor/casdoor/pt_af_logic/types"
 	af_client "github.com/casdoor/casdoor/pt_af_sdk"
 )
 
@@ -31,7 +32,7 @@ func DisableTenant(subscription *object.Subscription) error {
 		return fmt.Errorf("object.GetUser: %w", err)
 	}
 
-	if tenantID, found := customer.Properties[af_client.PtPropPref+"Tenant ID"]; found {
+	if tenantID, found := customer.Properties[types.PtPropTenantID]; found && tenantID != "" {
 		existingTenant, err := af.GetTenant(tenantID)
 		if err != nil {
 			return fmt.Errorf("af.GetTenant: %w", err)
