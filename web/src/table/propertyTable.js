@@ -28,7 +28,7 @@ class PropertyTable extends React.Component {
     // transfer the Object to object[]
     if (this.props.properties !== null) {
       Object.entries(this.props.properties).map((item, index) => {
-        this.state.properties.push({key: index, name: item[0], value: item[1]});
+        this.state.properties.push({key: index, name: item[0], value: item[1], disabled: item[0].startsWith("[PT AF]") && !Setting.isAdminUser(this.props.account)});
       });
     }
   }
@@ -79,7 +79,7 @@ class PropertyTable extends React.Component {
         width: "200px",
         render: (text, record, index) => {
           return (
-            <Input value={text} onChange={e => {
+            <Input disabled={record.disabled} value={text} onChange={e => {
               this.updateField(table, index, "name", e.target.value);
             }} />
           );
@@ -91,7 +91,7 @@ class PropertyTable extends React.Component {
         width: "200px",
         render: (text, record, index) => {
           return (
-            <Input value={text} onChange={e => {
+            <Input disabled={record.disabled} value={text} onChange={e => {
               this.updateField(table, index, "value", e.target.value);
             }} />
           );
@@ -103,6 +103,7 @@ class PropertyTable extends React.Component {
         width: "20px",
         render: (text, record, index) => {
           return (
+            !record.disabled &&
             <Button icon={<DeleteOutlined />} size="small" onClick={() => this.deleteRow(table, index)} />
           );
         },
