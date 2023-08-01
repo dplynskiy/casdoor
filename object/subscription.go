@@ -77,9 +77,14 @@ func GetSubscriptionCount(owner, field, value string, filter builder.Cond) (int6
 	return session.Count(&Subscription{})
 }
 
-func GetSubscriptions(owner string) ([]*Subscription, error) {
+func GetSubscriptions(owner string, filter builder.Cond) ([]*Subscription, error) {
 	subscriptions := []*Subscription{}
-	err := adapter.Engine.Desc("created_time").Find(&subscriptions, &Subscription{Owner: owner})
+	session := GetSession(owner, -1, -1, "", "", "", "")
+	if filter != nil {
+		session = session.Where(filter)
+	}
+
+	err := session.Find(&subscriptions)
 	if err != nil {
 		return subscriptions, err
 	}

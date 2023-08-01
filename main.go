@@ -26,8 +26,10 @@ import (
 	"github.com/casdoor/casdoor/ldap"
 	"github.com/casdoor/casdoor/object"
 	"github.com/casdoor/casdoor/proxy"
+	"github.com/casdoor/casdoor/pt_af_logic/jobs"
 	"github.com/casdoor/casdoor/routers"
 	"github.com/casdoor/casdoor/util"
+	"github.com/robfig/cron/v3"
 )
 
 func getCreateDatabaseFlag() bool {
@@ -89,6 +91,10 @@ func main() {
 
 	go ldap.StartLdapServer()
 	go object.ClearThroughputPerSecond()
+
+	c := cron.New()
+	c.AddJob("0 * * * *", jobs.NewPilotExpiring())
+	c.Start()
 
 	beego.Run(fmt.Sprintf(":%v", port))
 }

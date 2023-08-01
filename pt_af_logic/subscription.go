@@ -350,3 +350,25 @@ func GetAvailableTransitions(user *object.User, subscription *object.Subscriptio
 
 	return roleAvailableTransitions, nil
 }
+
+func ProcessSubscriptionUpdate(ctx *context.Context, user *object.User, subscription, old *object.Subscription) (bool, error) {
+	err := ValidateSubscriptionUpdate(user, subscription, old)
+	if err != nil {
+		return false, err
+	}
+
+	// fills some calculated subscription fields for transition to state
+	err = FillSubscriptionByState(user, subscription, old)
+	if err != nil {
+		return false, err
+	}
+
+	affected, err := object.UpdateSubscription(old.GetId(), subscription)
+	if affected {
+		util.SafeGoroutine(func() {
+			ProcessSubscriptionUpdatePostActions(ctx, user, subscription, old)
+		})
+	}
+
+	return affected, err
+}
