@@ -198,12 +198,12 @@ func (c *ApiController) Signup() {
 		Tag:               "manager",
 	}
 
-	if len(organization.Tags) > 0 {
-		tokens := strings.Split(organization.Tags[0], "|")
-		if len(tokens) > 0 {
-			user.Tag = tokens[0]
-		}
-	}
+	// if len(organization.Tags) > 0 {
+	// 	tokens := strings.Split(organization.Tags[0], "|")
+	// 	if len(tokens) > 0 {
+	// 		user.Tag = tokens[0]
+	// 	}
+	// }
 
 	if application.GetSignupItemRule("Display name") == "First, last" {
 		if authForm.FirstName != "" || authForm.LastName != "" {
