@@ -101,6 +101,9 @@ import SamlCallback from "./auth/SamlCallback";
 import {withTranslation} from "react-i18next";
 import ThemeSelect from "./common/select/ThemeSelect";
 import OrganizationSelect from "./common/select/OrganizationSelect";
+import {clearWeb3AuthToken} from "./auth/Web3Auth";
+import EnforcerEditPage from "./EnforcerEditPage";
+import EnforcerListPage from "./EnforcerListPage";
 
 const {Header, Footer, Content} = Layout;
 
@@ -323,12 +326,11 @@ class App extends Component {
       .then((res) => {
         if (res.status === "ok") {
           const owner = this.state.account.owner;
-
           this.setState({
             account: null,
             themeAlgorithm: ["default"],
           });
-
+          clearWeb3AuthToken();
           Setting.showMessage("success", i18next.t("application:Logged out successfully"));
           const redirectUri = res.data2;
           if (redirectUri !== null && redirectUri !== undefined && redirectUri !== "") {
@@ -621,6 +623,8 @@ class App extends Component {
         <Route exact path="/permissions/:organizationName/:permissionName" render={(props) => this.renderLoginIfNotLoggedIn(<PermissionEditPage account={this.state.account} {...props} />)} />
         <Route exact path="/models" render={(props) => this.renderLoginIfNotLoggedIn(<ModelListPage account={this.state.account} {...props} />)} />
         <Route exact path="/models/:organizationName/:modelName" render={(props) => this.renderLoginIfNotLoggedIn(<ModelEditPage account={this.state.account} {...props} />)} />
+        <Route exact path="/enforcers" render={(props) => this.renderLoginIfNotLoggedIn(<EnforcerListPage account={this.state.account} {...props} />)} />
+        <Route exact path="/enforcers/:organizationName/:enforcerName" render={(props) => this.renderLoginIfNotLoggedIn(<EnforcerEditPage account={this.state.account} {...props} />)} />
         <Route exact path="/adapters" render={(props) => this.renderLoginIfNotLoggedIn(<AdapterListPage account={this.state.account} {...props} />)} />
         <Route exact path="/adapters/:organizationName/:adapterName" render={(props) => this.renderLoginIfNotLoggedIn(<AdapterEditPage account={this.state.account} {...props} />)} />
         <Route exact path="/providers" render={(props) => this.renderLoginIfNotLoggedIn(<ProviderListPage account={this.state.account} {...props} />)} />
@@ -653,7 +657,7 @@ class App extends Component {
         <Route exact path="/subscriptions/:organizationName/:subscriptionName" render={(props) => this.renderLoginIfNotLoggedIn(<SubscriptionEditPage account={this.state.account} {...props} />)} />
         <Route exact path="/products" render={(props) => this.renderLoginIfNotLoggedIn(<ProductListPage account={this.state.account} {...props} />)} />
         <Route exact path="/products/:organizationName/:productName" render={(props) => this.renderLoginIfNotLoggedIn(<ProductEditPage account={this.state.account} {...props} />)} />
-        <Route exact path="/products/:productName/buy" render={(props) => this.renderLoginIfNotLoggedIn(<ProductBuyPage account={this.state.account} {...props} />)} />
+        <Route exact path="/products/:organizationName/:productName/buy" render={(props) => this.renderLoginIfNotLoggedIn(<ProductBuyPage account={this.state.account} {...props} />)} />
         <Route exact path="/payments" render={(props) => this.renderLoginIfNotLoggedIn(<PaymentListPage account={this.state.account} {...props} />)} />
         <Route exact path="/payments/:paymentName" render={(props) => this.renderLoginIfNotLoggedIn(<PaymentEditPage account={this.state.account} {...props} />)} />
         <Route exact path="/payments/:paymentName/result" render={(props) => this.renderLoginIfNotLoggedIn(<PaymentResultPage account={this.state.account} {...props} />)} />

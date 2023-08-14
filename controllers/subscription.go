@@ -50,8 +50,7 @@ func (c *ApiController) GetSubscriptions() {
 			return
 		}
 
-		c.Data["json"] = subscriptions
-		c.ServeJSON()
+		c.ResponseOk(subscriptions)
 	} else {
 		limit := util.ParseInt(limit)
 		count, err := object.GetSubscriptionCount(owner, field, value, filter)
@@ -90,8 +89,7 @@ func (c *ApiController) GetSubscription() {
 		return
 	}
 
-	c.Data["json"] = subscription
-	c.ServeJSON()
+	c.ResponseOk(subscription)
 }
 
 // UpdateSubscription

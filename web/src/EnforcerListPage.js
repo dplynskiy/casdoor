@@ -17,36 +17,30 @@ import {Link} from "react-router-dom";
 import {Button, Switch, Table} from "antd";
 import moment from "moment";
 import * as Setting from "./Setting";
-import * as PlanBackend from "./backend/PlanBackend";
+import * as EnforcerBackend from "./backend/EnforcerBackend";
 import i18next from "i18next";
 import BaseListPage from "./BaseListPage";
 import PopconfirmModal from "./common/modal/PopconfirmModal";
 
-class PlanListPage extends BaseListPage {
-  newPlan() {
+class EnforcerListPage extends BaseListPage {
+  newEnforcer() {
     const randomName = Setting.getRandomName();
     const owner = Setting.getRequestOrganization(this.props.account);
     return {
       owner: owner,
-      name: `plan_${randomName}`,
+      name: `enforcer_${randomName}`,
       createdTime: moment().format(),
-      displayName: `New Plan - ${randomName}`,
-      description: "",
-      pricePerMonth: 10,
-      pricePerYear: 100,
-      currency: "USD",
+      displayName: `New Enforcer - ${randomName}`,
       isEnabled: true,
-      role: "",
-      options: [],
     };
   }
 
-  addPlan() {
-    const newPlan = this.newPlan();
-    PlanBackend.addPlan(newPlan)
+  addEnforcer() {
+    const newEnforcer = this.newEnforcer();
+    EnforcerBackend.addEnforcer(newEnforcer)
       .then((res) => {
         if (res.status === "ok") {
-          this.props.history.push({pathname: `/plans/${newPlan.owner}/${newPlan.name}`, mode: "add"});
+          this.props.history.push({pathname: `/enforcers/${newEnforcer.owner}/${newEnforcer.name}`, mode: "add"});
           Setting.showMessage("success", i18next.t("general:Successfully added"));
         } else {
           Setting.showMessage("error", `${i18next.t("general:Failed to add")}: ${res.msg}`);
@@ -57,8 +51,8 @@ class PlanListPage extends BaseListPage {
       });
   }
 
-  deletePlan(i) {
-    PlanBackend.deletePlan(this.state.data[i])
+  deleteEnforcer(i) {
+    EnforcerBackend.deleteEnforcer(this.state.data[i])
       .then((res) => {
         if (res.status === "ok") {
           Setting.showMessage("success", i18next.t("general:Successfully deleted"));
@@ -75,19 +69,19 @@ class PlanListPage extends BaseListPage {
       });
   }
 
-  renderTable(plans) {
+  renderTable(enforcers) {
     const columns = [
       {
         title: i18next.t("general:Name"),
         dataIndex: "name",
         key: "name",
-        width: "140px",
+        width: "150px",
         fixed: "left",
         sorter: true,
         ...this.getColumnSearchProps("name"),
         render: (text, record, index) => {
           return (
-            <Link to={`/plans/${record.owner}/${record.name}`}>
+            <Link to={`/enforcers/${record.owner}/${text}`}>
               {text}
             </Link>
           );
@@ -122,37 +116,9 @@ class PlanListPage extends BaseListPage {
         title: i18next.t("general:Display name"),
         dataIndex: "displayName",
         key: "displayName",
-        width: "170px",
+        width: "200px",
         sorter: true,
         ...this.getColumnSearchProps("displayName"),
-      },
-      {
-        title: i18next.t("plan:Price per month"),
-        dataIndex: "pricePerMonth",
-        key: "pricePerMonth",
-        width: "130px",
-        ...this.getColumnSearchProps("pricePerMonth"),
-      },
-      {
-        title: i18next.t("plan:Price per year"),
-        dataIndex: "pricePerYear",
-        key: "pricePerYear",
-        width: "130px",
-        ...this.getColumnSearchProps("pricePerYear"),
-      },
-      {
-        title: i18next.t("general:Role"),
-        dataIndex: "role",
-        key: "role",
-        width: "140px",
-        ...this.getColumnSearchProps("role"),
-        render: (text, record, index) => {
-          return (
-            <Link to={`/roles/${encodeURIComponent(text)}`}>
-              {text}
-            </Link>
-          );
-        },
       },
       {
         title: i18next.t("general:Is enabled"),
@@ -170,15 +136,16 @@ class PlanListPage extends BaseListPage {
         title: i18next.t("general:Action"),
         dataIndex: "",
         key: "op",
-        width: "200px",
+        width: "170px",
         fixed: (Setting.isMobile()) ? "false" : "right",
         render: (text, record, index) => {
           return (
             <div>
-              <Button style={{marginTop: "10px", marginBottom: "10px", marginRight: "10px"}} type="primary" onClick={() => this.props.history.push(`/plans/${record.owner}/${record.name}`)}>{i18next.t("general:Edit")}</Button>
+              <Button style={{marginTop: "10px", marginBottom: "10px", marginRight: "10px"}} type="primary"
+                onClick={() => this.props.history.push(`/enforcers/${record.owner}/${record.name}`)}>{i18next.t("general:Edit")}</Button>
               <PopconfirmModal
                 title={i18next.t("general:Sure to delete") + `: ${record.name} ?`}
-                onConfirm={() => this.deletePlan(index)}
+                onConfirm={() => this.deleteEnforcer(index)}
               >
               </PopconfirmModal>
             </div>
@@ -196,11 +163,13 @@ class PlanListPage extends BaseListPage {
 
     return (
       <div>
-        <Table scroll={{x: "max-content"}} columns={columns} dataSource={plans} rowKey={(record) => `${record.owner}/${record.name}`} size="middle" bordered pagination={paginationProps}
+        <Table scroll={{x: "max-content"}} columns={columns} dataSource={enforcers} rowKey={(record) => `${record.owner}/${record.name}`} size="middle" bordered
+          pagination={paginationProps}
           title={() => (
             <div>
-              {i18next.t("general:Plans")}&nbsp;&nbsp;&nbsp;&nbsp;
-              <Button type="primary" size="small" onClick={this.addPlan.bind(this)}>{i18next.t("general:Add")}</Button>
+              {i18next.t("general:Enforcers")}&nbsp;&nbsp;&nbsp;&nbsp;
+              <Button type="primary" size="small"
+                onClick={this.addEnforcer.bind(this)}>{i18next.t("general:Add")}</Button>
             </div>
           )}
           loading={this.state.loading}
@@ -218,7 +187,7 @@ class PlanListPage extends BaseListPage {
       value = params.type;
     }
     this.setState({loading: true});
-    PlanBackend.getPlans(Setting.isDefaultOrganizationSelected(this.props.account) ? "" : Setting.getRequestOrganization(this.props.account), params.pagination.current, params.pagination.pageSize, field, value, sortField, sortOrder)
+    EnforcerBackend.getEnforcers(Setting.isDefaultOrganizationSelected(this.props.account) ? "" : Setting.getRequestOrganization(this.props.account), params.pagination.current, params.pagination.pageSize, field, value, sortField, sortOrder)
       .then((res) => {
         this.setState({
           loading: false,
@@ -246,4 +215,4 @@ class PlanListPage extends BaseListPage {
   };
 }
 
-export default PlanListPage;
+export default EnforcerListPage;

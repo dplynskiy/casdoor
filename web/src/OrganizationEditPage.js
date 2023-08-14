@@ -76,7 +76,7 @@ class OrganizationEditPage extends React.Component {
         }
 
         this.setState({
-          applications: res,
+          applications: res.data || [],
         });
       });
   }
